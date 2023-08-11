@@ -1,0 +1,101 @@
+# -----------------------------------------------------------------------------
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto. Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# -----------------------------------------------------------------------------
+
+aws_credentials_file: scripts/s3/pbss_dir.secret
+logging_iter: 9999999999999  # disable the printing logger
+
+max_iter: 500000
+
+wandb_scalar_iter: 100
+wandb_image_iter: 1000
+validation_iter: 2000
+
+speed_benchmark: False
+
+checkpoint:
+    save_to_s3: False
+    load_from_s3: False
+    s3_credentials: scripts/s3/pbss_dir.secret
+    s3_bucket: nerf
+    save_iter: 10000
+
+trainer:
+    type: projects.nerf.trainers.nerf
+    ema_config:
+        enabled: False
+        load_ema_checkpoint: False
+    loss_weight:
+        render: 1.0
+        render_fine: 1.0
+    init:
+        type: xavier
+    amp_config:
+        enabled: True
+
+model:
+    type: projects.nerf.models.nerf
+    mlp:
+        layers_feat: [null,256,256,256,256,256,256,256,256]
+        layers_rgb: [null,128,3]
+        skip: [4]
+    posenc:
+        L_3D: 10
+        L_view: 4
+    density_activ: softplus
+    view_dep: True
+    dist:
+        param: metric
+        range: [2,6]
+    sample_intvs: 64
+    sample_stratified: True
+    fine_sampling: True
+    sample_intvs_fine: 128
+    rand_rays: 1024
+    density_noise_reg:
+    opaque_background: False
+    camera_ndc: False
+
+optim:
+    type: Adam
+    params:
+        lr: 0.0005
+        betas: [0.9, 0.999]
+    sched:
+        iteration_mode: False
+        type: step
+        step_size: 20
+        gamma: 0.97724
+
+data:
+    type: projects.nerf.datasets.nerf_blender
+    use_multi_epoch_loader: True
+    num_workers: 4
+    root: datasets/nerf-synthetic/lego
+    image_size: [400,400]
+    preload: True
+    bgcolor: 1
+    train:
+        batch_size: 2
+        subset:
+    val:
+        batch_size: 2
+        subset: 4
+        max_viz_samples: 16
+
+test_data:
+    type: projects.nerf.datasets.nerf_blender
+    num_workers: 4
+    root: datasets/nerf-synthetic/lego
+    image_size: [400,400]
+    preload: True
+    bgcolor: 1
+    test:
+        batch_size: 2
+        subset:

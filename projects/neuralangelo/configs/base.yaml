@@ -1,0 +1,146 @@
+# -----------------------------------------------------------------------------
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto. Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# -----------------------------------------------------------------------------
+
+logging_iter: 9999999999999  # disable the printing logger
+
+max_iter: 500000
+
+wandb_scalar_iter: 100
+wandb_image_iter: 10000
+validation_iter: 5000
+speed_benchmark: False
+
+checkpoint:
+    save_iter: 20000
+
+trainer:
+    type: projects.neuralangelo.trainer
+    ema_config:
+        enabled: False
+        load_ema_checkpoint: False
+    loss_weight:
+        render: 1.0
+        eikonal: 0.1
+        curvature: 5e-4
+    init:
+        type: none
+    amp_config:
+        enabled: False
+    depth_vis_scale: 0.5
+
+model:
+    type: projects.neuralangelo.model
+    object:
+        sdf:
+            mlp:
+                num_layers: 2
+                hidden_dim: 256
+                skip: []
+                activ: softplus
+                activ_params:
+                    beta: 100
+                geometric_init: True
+                weight_norm: True
+                out_bias: 0.5
+                inside_out: False
+            encoding:
+                type: hashgrid
+                levels: 16
+                hashgrid:
+                    min_logres: 5
+                    max_logres: 11
+                    dict_size: 22
+                    dim: 8
+                    range: [-2,2]
+                coarse2fine:
+                    enabled: True
+                    init_active_level: 4
+                    step: 5000
+            gradient:
+                mode: numerical
+                taps: 4
+        rgb:
+            mlp:
+                num_layers: 4
+                hidden_dim: 256
+                skip: []
+                activ: relu_
+                activ_params: {}
+                weight_norm: True
+            mode: idr
+            encoding_view:
+                type: spherical
+                levels: 3
+        s_var:
+            init_val: 3.
+            anneal_end: 0.1
+    background:
+        white: False
+        mlp:
+            num_layers: 8
+            hidden_dim: 256
+            skip: [4]
+            num_layers_rgb: 2
+            hidden_dim_rgb: 128
+            skip_rgb: []
+            activ: relu
+            activ_params: {}
+            activ_density: softplus
+            activ_density_params: {}
+        view_dep: True
+        encoding:
+            type: fourier
+            levels: 10
+        encoding_view:
+            type: spherical
+            levels: 3
+    render:
+        rand_rays: 512
+        num_samples:
+            coarse: 64
+            fine: 16
+            background: 32
+        num_sample_hierarchy: 4
+        stratified: True
+    appear_embed:
+        enabled: False
+        dim: 8
+
+optim:
+    type: AdamW
+    params:
+        lr: 1e-3
+        weight_decay: 1e-3
+    sched:
+        iteration_mode: True
+        type: two_steps_with_warmup
+        warm_up_end: 5000
+        two_steps: [300000,400000]
+        gamma: 10.0
+
+data:
+    type: projects.nerf.datasets.nerf_blender
+    root: datasets/nerf-synthetic/lego
+    use_multi_epoch_loader: True
+    num_workers: 4
+    preload: True
+    num_images:  # The number of training images.
+    train:
+        image_size: [800,800]
+        batch_size: 2
+        subset:
+    val:
+        image_size: [400,400]
+        batch_size: 2
+        subset: 4
+        max_viz_samples: 16
+    readjust:
+        center: [0.,0.,0.]
+        scale: 1.

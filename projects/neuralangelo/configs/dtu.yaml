@@ -1,0 +1,37 @@
+# -----------------------------------------------------------------------------
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto. Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# -----------------------------------------------------------------------------
+
+_parent_: projects/neuralangelo/configs/base.yaml
+
+model:
+    object:
+        sdf:
+            mlp:
+                inside_out: False
+            encoding:
+                coarse2fine:
+                    init_active_level: 4
+        s_var:
+            init_val: 1.4
+    appear_embed:
+        enabled: False
+
+data:
+    type: projects.neuralangelo.data
+    root: datasets/dtu/dtu_scan24
+    train:
+        image_size: [1200,1600]
+        batch_size: 1
+        subset:
+    val:
+        image_size: [300,400]
+        batch_size: 1
+        subset: 1
+        max_viz_samples: 16

@@ -1,0 +1,64 @@
+# -----------------------------------------------------------------------------
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto. Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# -----------------------------------------------------------------------------
+
+_parent_: projects/nerf/configs/nerf_blender.yaml
+
+max_iter: 200000
+
+wandb_scalar_iter: 50
+wandb_image_iter: 500
+validation_iter: 1000
+
+model:
+    type: projects.nerf.models.nerf
+    dist:
+        param: ndc
+        range: [0,1]
+    sample_intvs: 64
+    fine_sampling: True
+    sample_intvs_fine: 128
+    rand_rays: 1024
+    camera_ndc: True
+
+optim:
+    type: Adam
+    params:
+        lr: 0.0005
+        betas: [0.9, 0.999]
+    sched:
+        iteration_mode: False
+        type: step
+        step_size: 100
+        gamma: 0.97724
+
+data:
+    type: projects.nerf.datasets.nerf_llff
+    use_multi_epoch_loader: True
+    num_workers: 4
+    root: datasets/nerf-llff/fern
+    image_size: [480,640]
+    preload: True
+    val_ratio: 0.1
+    train:
+        batch_size: 2
+        subset:
+    val:
+        batch_size: 2
+        subset: 4
+
+test_data:
+    type: projects.nerf.datasets.nerf_llff
+    num_workers: 4
+    root: datasets/nerf-llff/fern
+    image_size: [480,640]
+    preload: True
+    test:
+        batch_size: 2
+        subset:

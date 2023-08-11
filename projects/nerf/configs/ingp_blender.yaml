@@ -1,0 +1,41 @@
+# -----------------------------------------------------------------------------
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto. Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# -----------------------------------------------------------------------------
+
+_parent_: projects/nerf/configs/nerf_blender.yaml
+
+max_iter: 500000
+
+wandb_scalar_iter: 500
+wandb_image_iter: 10000
+validation_iter: 10000
+
+model:
+    type: projects.nerf.models.ingp
+    mlp:
+        layers_feat: [null,64,64]
+        layers_rgb: [null,64,3]
+    voxel:
+        levels:
+            min: 4
+            max: 12
+            num: 16
+        dict_size: 19
+        dim: 4
+        range: [-5,5]
+        init_scale: 1e-4
+    sample_intvs: 256
+    fine_sampling: False
+
+optim:
+    type: Adam
+    params:
+        lr: 0.01
+    sched:
+        gamma: 1

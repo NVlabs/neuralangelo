@@ -1,0 +1,115 @@
+# -----------------------------------------------------------------------------
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto. Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# -----------------------------------------------------------------------------
+
+# This is the base configuration file.
+
+# We often dump images to understand what's going on in the training.
+# image_save_iter specifies how often we dump images.
+image_save_iter: 9999999999
+# metrics_iter and metrics_epoch specify how often we compute the performance metrics
+# If these two numbers are not set, they are copied from checkpoint.save_iter and checkpoint.save_epoch respectively.
+metrics_iter:
+metrics_epoch:
+# max_epoch and max_iter specify what is the maximum epoch and iteration that we will train our model.
+# min( max_epoch * dataset_size / batch_size, max_iter) will be the total number of iterations that the model will be trained.
+max_epoch: 9999999999
+max_iter: 9999999999
+# logging_iter controls how often we log the training stats.
+logging_iter: 100
+# If speed_benchmark is True, we will print out time required for forward, backward, and gradient update.
+speed_benchmark: False
+# Kill the process if `timeout_period` seconds have passed since the last iteration. This usually means the process gets stuck.
+timeout_period: 9999999
+
+# Default local rank
+local_rank: 0
+# Toggle NVTX profiler
+nvtx_profile: False
+
+# Checkpointer
+checkpoint:
+    # If save_iter is set to M, then we save the checkpoint every M iteration.
+    # If save_latest_iter is set to M, then we save the checkpoint every M iteration using the name
+    # 'latest_checkpoint.pt', so that the new checkpoint will overwrite previous ones.
+    # If save_epoch is set to N, then we save the checkpoint every N epoch.
+    # Both can be set at the same time.
+    save_iter: 9999999999
+    save_latest_iter: 9999999999
+    save_epoch: 9999999999
+    save_period: 9999999999
+    # If True, load state_dict to the models in strict mode
+    strict_resume: True
+
+# Trainer
+trainer:
+    ema_config:
+        enabled: False
+        beta: 0.9999
+        start_iteration: 0
+
+    image_to_tensorboard: False
+    ddp_config:
+        find_unused_parameters: False
+        static_graph: True
+    init:
+        type: none
+        gain:
+    amp_config:
+        init_scale: 65536.0
+        growth_factor: 2.0
+        backoff_factor: 0.5
+        growth_interval: 2000
+        enabled: False
+    grad_accum_iter: 1
+
+# Networks
+model:
+    type: dummy
+
+# Optimizers
+optim:
+    type: Adam
+    params:
+        # This defines the parameters for the specified PyTorch optimizer class (e.g. betas, eps).
+        lr: 0.0001
+    fused_opt: False
+    # Default learning rate policy is step with iteration_mode=False (epoch mode), step_size=10^10, and gamma=1.
+    # This means a constant learning rate
+    sched:
+        iteration_mode: False
+        type: step
+        step_size: 9999999999
+        gamma: 1
+
+# Data
+data:
+    name: dummy
+    type: imaginaire.datasets.images
+    use_multi_epoch_loader: False
+    num_workers: 0
+test_data:
+    name: dummy
+    type: imaginaire.datasets.images
+    num_workers: 0
+    test:
+        is_lmdb: False
+        roots:
+        batch_size: 1
+
+# cuDNN
+# set deterministic to True for better reproducibility of the results. When deterministic is True, it will only use CUDNN functions that are deterministic.
+# If benchmark is set to True, cudnn will benchmark several algorithms and pick that which it found to be fastest at the first iteration.
+cudnn:
+    deterministic: False
+    benchmark: True
+
+# Others
+pretrained_weight:
+inference_args: {}
