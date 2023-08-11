@@ -33,7 +33,8 @@ EXPERIMENT=toy_example
 GROUP=example_group
 NAME=example_name
 CONFIG=projects/neuralangelo/configs/custom/${EXPERIMENT}.yaml
-torchrun --nproc_per_node=1 train.py \
+GPUS=1  # use >1 for multi-GPU training!
+torchrun --nproc_per_node=${GPUS} train.py \
     --logdir=logs/${GROUP}/${NAME} \
     --config=${CONFIG} \
     --show_pbar
@@ -55,7 +56,9 @@ OUTPUT_MESH=xxx.ply
 CONFIG=projects/neuralangelo/configs/custom/${EXPERIMENT}.yaml
 RESOLUTION=2048
 BLOCK_RES=128
-python3 projects/neuralangelo/scripts/extract_mesh.py \
+GPUS=1  # use >1 for multi-GPU mesh extraction
+torchrun --nproc_per_node=${GPUS} projects/neuralangelo/scripts/extract_mesh.py \
+    --logdir=logs/${GROUP}/${NAME} \
     --config=${CONFIG} \
     --checkpoint=${CHECKPOINT} \
     --output_file=${OUTPUT_MESH} \

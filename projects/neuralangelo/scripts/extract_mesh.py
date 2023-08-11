@@ -20,6 +20,7 @@ sys.path.append(os.getcwd())
 from imaginaire.config import Config, recursive_update_strict, parse_cmdline_arguments  # noqa: E402
 from imaginaire.utils.distributed import init_dist, get_world_size, is_master, master_only_print as print  # noqa: E402
 from imaginaire.utils.gpu_affinity import set_affinity  # noqa: E402
+from imaginaire.trainers.utils.logging import init_logging  # noqa: E402
 from imaginaire.trainers.utils.get_trainer import get_trainer  # noqa: E402
 from projects.neuralangelo.utils.mesh import extract_mesh  # noqa: E402
 
@@ -54,6 +55,8 @@ def main():
         cfg.local_rank = args.local_rank
         init_dist(cfg.local_rank, rank=-1, world_size=-1)
     print(f"Running mesh extraction with {get_world_size()} GPUs.")
+
+    cfg.logdir = init_logging(args.config, args.logdir, makedir=True)
 
     # Initialize data loaders and models.
     trainer = get_trainer(cfg, is_inference=True, seed=0)
