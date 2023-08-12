@@ -4,7 +4,7 @@
 This is the official repo for the implementation of **Neuralangelo: High-Fidelity Neural Surface Reconstruction**.  
 The code is built upon the Imaginaire library from the Deep Imagination Research Group at NVIDIA.
 
-<img src="https://research.nvidia.com/labs/dir/neuralangelo/github-teaser.gif">
+<img src="assets/teaser.gif">
 
 For business inquiries, please submit the [NVIDIA research licensing form](https://www.nvidia.com/en-us/research/inquiries/).
 
