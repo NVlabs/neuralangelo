@@ -82,6 +82,7 @@ model:
             init_val: 3.
             anneal_end: 0.1
     background:
+        enabled: True
         white: False
         mlp:
             num_layers: 8

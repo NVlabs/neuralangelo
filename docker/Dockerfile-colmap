@@ -41,8 +41,6 @@ RUN apt-get update && apt-get install -y \
     ffmpeg
 RUN pip install \
     addict \
-    opencv-contrib-python \
-    opencv-python \
     opencv-python-headless \
     pyyaml \
     trimesh

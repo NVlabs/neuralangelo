@@ -16,10 +16,12 @@ from argparse import ArgumentParser
 from pathlib import Path
 import yaml
 from addict import Dict
-import cv2
+from PIL import Image, ImageFile
 
 dir_path = Path(os.path.dirname(os.path.realpath(__file__))).parents[2]
 sys.path.append(dir_path.__str__())
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 def generate_config(args):
@@ -39,6 +41,7 @@ def generate_config(args):
     elif args.scene_type == "indoor":
         cfg.model.object.sdf.mlp.inside_out = True
         cfg.model.object.sdf.encoding.coarse2fine.init_active_level = 8
+        cfg.model.background.enabled = False
         cfg.model.render.num_samples.background = 0
     elif args.scene_type == "object":
         cfg.model.object.sdf.mlp.inside_out = False
@@ -48,8 +51,8 @@ def generate_config(args):
     # data config
     cfg.data.type = "projects.neuralangelo.data"
     cfg.data.root = args.data_dir
-    img = cv2.imread(os.path.join(args.data_dir, "images", os.listdir(os.path.join(args.data_dir, "images"))[0]))
-    h, w, _ = img.shape
+    img = Image.open(os.path.join(args.data_dir, "images", os.listdir(os.path.join(args.data_dir, "images"))[0]))
+    w, h = img.size
     cfg.data.train.image_size = [h, w]
     short_size = args.val_short_size
     cfg.data.val.image_size = [short_size, int(w/h*short_size)] if w > h else [int(h/w*short_size), short_size]

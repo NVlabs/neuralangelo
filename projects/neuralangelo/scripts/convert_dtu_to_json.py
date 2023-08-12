@@ -15,6 +15,7 @@ import json
 from argparse import ArgumentParser
 import os
 import cv2
+from PIL import Image, ImageFile
 from glob import glob
 import math
 import sys
@@ -22,7 +23,9 @@ from pathlib import Path
 
 dir_path = Path(os.path.dirname(os.path.realpath(__file__))).parents[2]
 sys.path.append(dir_path.__str__())
-from projects.neuralangelo.utils import neuralangelo_utils  # NOQA
+from projects.neuralangelo.utils import misc  # NOQA
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 def load_K_Rt_from_P(filename, P=None):
@@ -82,7 +85,7 @@ def dtu_to_json(args):
             P = world_mat @ scale_mat
             P = P[:3, :4]
             intrinsic_param, c2w = load_K_Rt_from_P(None, P)
-            c2w_gl = neuralangelo_utils.cv_to_gl(c2w)
+            c2w_gl = misc.cv_to_gl(c2w)
 
             frame = {"file_path": 'image/' + image, "transform_matrix": c2w_gl.tolist()}
             out["frames"].append(frame)
@@ -93,7 +96,7 @@ def dtu_to_json(args):
         cy = intrinsic_param[1][2]
         sk_x = intrinsic_param[0][1]
         sk_y = intrinsic_param[1][0]
-        h, w, _ = cv2.imread(os.path.join(scene_path, 'image', image)).shape
+        w, h = Image.open(os.path.join(scene_path, 'image', image)).size
 
         angle_x = math.atan(w / (fl_x * 2)) * 2
         angle_y = math.atan(h / (fl_y * 2)) * 2

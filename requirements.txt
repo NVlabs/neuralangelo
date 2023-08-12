@@ -1,3 +1,4 @@
+addict
 gdown
 git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
 gpustat
@@ -12,8 +13,6 @@ matplotlib
 mediapy
 nvidia-ml-py3
 open3d
-opencv-contrib-python
-opencv-python
 opencv-python-headless
 OpenEXR
 pathlib
@@ -22,6 +21,7 @@ pyequilib
 pyexr
 PyMCubes
 pyquaternion
+pyyaml
 requests
 scikit-image
 scikit-video
