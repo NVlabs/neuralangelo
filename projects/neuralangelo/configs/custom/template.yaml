@@ -23,7 +23,7 @@ model:
         dim: 8
 
 data:
-    type: projects.neuralangelo.datasets.json_data
+    type: projects.neuralangelo.data
     root:  # The root path of the dataset.
     num_images:  # The number of training images.
     train:
