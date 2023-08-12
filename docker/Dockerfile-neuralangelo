@@ -28,9 +28,6 @@ RUN pip install --upgrade \
 
 # Install base Python libraries for Imaginaire
 COPY requirements.txt requirements.txt
-RUN pip install --upgrade -r requirements.txt
-
-# tiny-cuda-nn
 ARG FORCE_CUDA=1
 ARG TCNN_CUDA_ARCHITECTURES=70,72,75,80,86
-RUN pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+RUN pip install --upgrade -r requirements.txt
