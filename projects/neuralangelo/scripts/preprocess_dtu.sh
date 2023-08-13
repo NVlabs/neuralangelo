@@ -12,7 +12,9 @@
 
 echo "Download DTU data"
 mkdir -p "${1}"
-gdown 1zgD-uTLjO8hXcjLqelU444rwS9s9-Syg
+curl -L -o data.zip https://www.dropbox.com/sh/w0y8bbdmxzik3uk/AAAaZffBiJevxQzRskoOYcyja?dl=1
+unzip data.zip "data_DTU.zip"
+rm data.zip
 unzip -q data_DTU.zip -d ${1}
 rm data_DTU.zip
 echo "Generate json files"
