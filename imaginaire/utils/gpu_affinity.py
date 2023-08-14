@@ -65,14 +65,17 @@ def set_affinity(gpu_id=None):
     if gpu_id is None:
         gpu_id = int(os.getenv('LOCAL_RANK', 0))
 
-    dev = Device(gpu_id)
-    # os.sched_setaffinity() method in Python is used to set the CPU affinity mask of a process indicated
-    # by the specified process id.
-    # A process’s CPU affinity mask determines the set of CPUs on which it is eligible to run.
-    # Syntax: os.sched_setaffinity(pid, mask)
-    # pid=0 means the current process
-    os.sched_setaffinity(0, dev.get_cpu_affinity())
+    try:
+        dev = Device(gpu_id)
+        # os.sched_setaffinity() method in Python is used to set the CPU affinity mask of a process indicated
+        # by the specified process id.
+        # A process’s CPU affinity mask determines the set of CPUs on which it is eligible to run.
+        # Syntax: os.sched_setaffinity(pid, mask)
+        # pid=0 means the current process
+        os.sched_setaffinity(0, dev.get_cpu_affinity())
+        # list of ints
+        # representing the logical cores this process is now affinitied with
+        return os.sched_getaffinity(0)
 
-    # list of ints
-    # representing the logical cores this process is now affinitied with
-    return os.sched_getaffinity(0)
+    except pynvml.nvml.NVMLError:
+        print("(Setting affinity with NVML failed, skipping...)")
