@@ -65,3 +65,15 @@ torchrun --nproc_per_node=${GPUS} projects/neuralangelo/scripts/extract_mesh.py 
     --resolution=${RESOLUTION} \
     --block_res=${BLOCK_RES}
 ```
+
+--------------------------------------
+
+If you find our code useful for your research, please cite
+```
+@inproceedings{li2023neuralangelo,
+  title={Neuralangelo: High-Fidelity Neural Surface Reconstruction},
+  author={Li, Zhaoshuo and M\"uller, Thomas and Evans, Alex and Taylor, Russell H and Unberath, Mathias and Liu, Ming-Yu and Lin, Chen-Hsuan},
+  booktitle={IEEE Conference on Computer Vision and Pattern Recognition ({CVPR})},
+  year={2023}
+}
+```
