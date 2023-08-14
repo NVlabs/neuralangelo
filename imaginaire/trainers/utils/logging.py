@@ -17,7 +17,6 @@ import torch.distributed as dist
 
 from imaginaire.utils.distributed import is_master, broadcast_object_list
 from imaginaire.utils.distributed import master_only_print as print
-from imaginaire.trainers.utils.meters import set_summary_writer
 
 
 def get_date_uid():
@@ -48,9 +47,6 @@ def init_logging(config_path, logdir, makedir=True):
         if makedir:
             print('Make folder {}'.format(_logdir))
             os.makedirs(_logdir, exist_ok=True)
-            _tensorboard_dir = os.path.join(_logdir, 'tensorboard')
-            os.makedirs(_tensorboard_dir, exist_ok=True)
-            set_summary_writer(_tensorboard_dir)
         return _logdir
 
     root_dir = 'logs'
