@@ -92,7 +92,7 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
 ## DTU dataset
 - Please use respecting the license terms of the dataset.
 
-You can run the following command to download DTU dataset and generate json files:
+You can run the following command to download [the DTU dataset](https://roboimagedata.compute.dtu.dk/?page_id=36) that is preprocessed by NeuS authors and generate json files:
 ```bash
 PATH_TO_DTU=datasets/dtu  # Modify this to be the DTU dataset root directory.
 bash projects/neuralangelo/scripts/preprocess_dtu.sh ${PATH_TO_DTU}
