@@ -87,7 +87,7 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
     We offer some tools to to inspect the pre-processing results. Below are some options:
 
     - Blender: Download [Blender](https://www.blender.org/download/) and follow the instructions in our [add-on repo](https://github.com/mli0603/BlenderNeuralangelo).
-    - This [Jupyter notebook](scripts/visualize_colmap.ipynb) (using K3D) can be helpful for visualizing the COLMAP results.
+    - This [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb) (using K3D) can be helpful for visualizing the COLMAP results.
 
 ## DTU dataset
 - Please use respecting the license terms of the dataset.
