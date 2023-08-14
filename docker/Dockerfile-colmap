@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
     xvfb
 # Colmap
-RUN git clone https://github.com/colmap/colmap.git && cd colmap && git checkout dev
+RUN git clone https://github.com/colmap/colmap.git && cd colmap
 RUN cd colmap && mkdir build && cd build && cmake .. -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURES="70;72;75;80;86" -GNinja
 RUN cd colmap/build && ninja && ninja install
 
@@ -42,5 +42,6 @@ RUN apt-get update && apt-get install -y \
 RUN pip install \
     addict \
     opencv-python-headless \
+    pillow \
     pyyaml \
     trimesh
