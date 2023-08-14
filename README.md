@@ -11,7 +11,7 @@ For business inquiries, please submit the [NVIDIA research licensing form](https
 ## Installation
 We offer two ways to setup the environment:
 1. We provide prebuilt Docker images, where
-    - `docker.io/chenhsuanlin/colmap:3.9` is for running COLMAP and the data preprocessing scripts. This includes the prebuilt COLMAP library (CUDA-supported).
+    - `docker.io/chenhsuanlin/colmap:3.8` is for running COLMAP and the data preprocessing scripts. This includes the prebuilt COLMAP library (CUDA-supported).
     - `docker.io/chenhsuanlin/neuralangelo:23.04-py3` is for running the main Neuralangelo pipeline.
 
     The corresponding Dockerfiles can be found in the `docker` directory.

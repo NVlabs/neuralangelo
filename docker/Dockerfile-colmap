@@ -1,5 +1,5 @@
-# docker build -f docker/Dockerfile-colmap -t chenhsuanlin/colmap:3.9 .
-# docker push chenhsuanlin/colmap:3.9
+# docker build -f docker/Dockerfile-colmap -t chenhsuanlin/colmap:3.8 .
+# docker push chenhsuanlin/colmap:3.8
 
 FROM nvcr.io/nvidia/cuda:11.8.0-devel-ubuntu20.04
 ARG DEBIAN_FRONTEND=noninteractive
@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
     xvfb
 # Colmap
-RUN git clone https://github.com/colmap/colmap.git && cd colmap
+RUN git clone https://github.com/colmap/colmap.git && cd colmap && git checkout 3.8
 RUN cd colmap && mkdir build && cd build && cmake .. -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURES="70;72;75;80;86" -GNinja
 RUN cd colmap/build && ninja && ninja install
 
