@@ -59,7 +59,7 @@ class NeuralSDF(torch.nn.Module):
 
     def build_mlp(self, cfg_mlp, input_dim=3):
         # SDF + point-wise feature
-        layer_dims = [input_dim] + [cfg_mlp.hidden_dim] * cfg_mlp.num_layers
+        layer_dims = [input_dim] + [cfg_mlp.hidden_dim] * cfg_mlp.num_layers + [cfg_mlp.hidden_dim]
         activ = get_activation(cfg_mlp.activ, **cfg_mlp.activ_params)
         self.mlp = MLPforNeuralSDF(layer_dims, skip_connection=cfg_mlp.skip, activ=activ,
                                    use_weightnorm=cfg_mlp.weight_norm, geometric_init=cfg_mlp.geometric_init,

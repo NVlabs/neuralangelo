@@ -40,7 +40,7 @@ model:
     object:
         sdf:
             mlp:
-                num_layers: 2
+                num_layers: 1
                 hidden_dim: 256
                 skip: []
                 activ: softplus
@@ -118,7 +118,7 @@ optim:
     type: AdamW
     params:
         lr: 1e-3
-        weight_decay: 1e-3
+        weight_decay: 1e-2
     sched:
         iteration_mode: True
         type: two_steps_with_warmup

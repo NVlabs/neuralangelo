@@ -60,7 +60,7 @@ Some useful notes:
     - Add `--wandb_name` to specify the W&B project name.
     - More detailed control can be found in the `init_wandb()` function in `imaginaire/trainers/base.py`.
 - Configs can be overridden through the command line (e.g. `--optim.params.lr=1e-2`).
-- Set `--checkpoint={CHECKPOINT_PATH}` to initialize with a certain checkpoint; set `--resume=True` to resume training.
+- Set `--checkpoint={CHECKPOINT_PATH}` to initialize with a certain checkpoint; set `--resume` to resume training.
 - If appearance embeddings are enabled, make sure `data.num_images` is set to the number of training images.
 
 --------------------------------------
