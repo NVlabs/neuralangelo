@@ -175,7 +175,7 @@ class NeuralSDF(torch.nn.Module):
                     hessian = None
             else:
                 raise ValueError("Only support 4 or 6 taps.")
-            return gradient, hessian
+        return gradient, hessian
 
 
 class NeuralRGB(torch.nn.Module):
