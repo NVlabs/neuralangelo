@@ -324,7 +324,8 @@ class BaseTrainer(object):
             self.timer.checkpoint_tic()  # reset timer
 
         # Save everything to the checkpoint.
-        if current_iteration % self.cfg.checkpoint.save_iter == 0:
+        if current_iteration % self.cfg.checkpoint.save_iter == 0 or \
+                current_iteration == self.cfg.max_iter:
             self.checkpointer.save(current_epoch, current_iteration)
 
         # Save everything to the checkpoint using the name 'latest_checkpoint.pt'.
