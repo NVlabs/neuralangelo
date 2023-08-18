@@ -628,13 +628,9 @@ class Checkpointer(object):
             # Load the state dicts.
             print('- Loading the model...')
             self.model.load_state_dict(state_dict['model'], strict=self.strict_resume)
+            self.resume_epoch = state_dict['epoch']
+            self.resume_iteration = state_dict['iteration']
             if resume:
-                try:
-                    self.resume_epoch = state_dict['epoch']
-                    self.resume_iteration = state_dict['iteration']
-                except Exception:  # TODO: for backward compatibility, should be removed eventually.
-                    self.resume_epoch = state_dict['current_epoch']
-                    self.resume_iteration = state_dict['current_iteration']
                 self.sched.last_epoch = self.resume_iteration if self.iteration_mode else self.resume_epoch
                 if load_opt:
                     print('- Loading the optimizer...')
