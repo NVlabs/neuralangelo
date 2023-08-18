@@ -87,12 +87,12 @@ torchrun --nproc_per_node=${GPUS} projects/neuralangelo/scripts/extract_mesh.py 
 ## Frequently asked questions (FAQ)
 **Q:** CUDA out of memory. How do I decrease the memory footprint?
    
-**A:** Neuralangelo requires 24 VRAM GPUs. You can follow the guidelines below to modify the hyperparameters to make Neuralangelo fit into your GPU:
+**A:** Neuralangelo requires 24 VRAM GPUs. If you run out of memory, you may follow the guidelines below to modify hyperparameters to make Neuralangelo fit into your GPU:
 
-    | GPU VRAM      | Hyperparameter |
-    | :------------ | :------------- |
-    | 8GB           | [dict_size](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L59) = 20, [dim](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L60) = 4 |
-    | 16GB          | [dict_size](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L59) = 21, [dim](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L60) = 8 |
+| GPU VRAM      | Hyperparameter |
+| :-----------: | :------------: |
+| 8GB           | [dict_size](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L59)=20, [dim](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L60)=4 |
+| 16GB          | [dict_size](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L59)=21, [dim](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L60)=8 |
 
 Please note that the above hyperparameter adjustment may sacrifice the reconstruction quality.
 
