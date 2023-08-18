@@ -10,6 +10,6 @@
 
 # usage: run_ffmpeg.sh <full_fname.mp4> <skip_frames>
 
-image_path=${1%.*}_skip${2}/raw_images
+image_path=datasets/${1%.*}_skip${2}/raw_images
 mkdir -p ${image_path}
 ffmpeg -i $1 -vf "select=not(mod(n\,$2))" -vsync vfr -q:v 2 ${image_path}/%06d.jpg

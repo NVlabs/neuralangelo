@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------
 
 # {experiment_name} {path_to_video} {skip_frame_rate} {scene_type}
-image_path=${2%.*}_skip${3}
+image_path=datasets/${2%.*}_skip${3}
 bash projects/neuralangelo/scripts/run_ffmpeg.sh ${2} ${3}
 bash projects/neuralangelo/scripts/run_colmap.sh ${image_path}
 python3 projects/neuralangelo/scripts/convert_data_to_json.py --data_dir ${image_path}/dense --scene_type ${4}

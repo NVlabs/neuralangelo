@@ -102,8 +102,11 @@ class NeuralSDF(torch.nn.Module):
         assert self.active_levels <= self.cfg_sdf.encoding.levels
 
     def set_normal_epsilon(self):
-        epsilon_res = self.resolutions[self.active_levels - 1]
-        self.normal_eps = 1. / epsilon_res
+        if self.cfg_sdf.encoding.coarse2fine.enabled:
+            epsilon_res = self.resolutions[self.active_levels - 1]
+            self.normal_eps = 1. / epsilon_res
+        else:
+            self.normal_eps = self.resolutions[-1]
 
     @torch.no_grad()
     def _get_coarse2fine_mask(self, points_enc, feat_dim):
