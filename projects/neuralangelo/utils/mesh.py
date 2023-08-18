@@ -35,7 +35,10 @@ def extract_mesh(sdf_func, bounds, intv, block_res=64):
         mesh = marching_cubes(sdf.numpy(), xyz.numpy(), intv)
         mesh_blocks.append(mesh)
     mesh_blocks_gather = [None] * get_world_size()
-    dist.all_gather_object(mesh_blocks_gather, mesh_blocks)
+    if dist.is_initialized():
+        dist.all_gather_object(mesh_blocks_gather, mesh_blocks)
+    else:
+        mesh_blocks_gather = [mesh_blocks]
     if is_master():
         mesh_blocks_all = [mesh for mesh_blocks in mesh_blocks_gather for mesh in mesh_blocks]
         mesh = trimesh.util.concatenate(mesh_blocks_all)
