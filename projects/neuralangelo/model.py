@@ -163,7 +163,7 @@ class Model(BaseModel):
         sdfs[outside[..., None].expand_as(sdfs)] = self.outside_val
         # Compute 1st- and 2nd-order gradients.
         rays_unit = ray_unit[..., None, :].expand_as(points).contiguous()  # [B,R,N,3]
-        gradients, hessians = self.neural_sdf.compute_gradients(points, compute_hessian=self.training, sdf=sdfs)
+        gradients, hessians = self.neural_sdf.compute_gradients(points, training=self.training, sdf=sdfs)
         normals = torch_F.normalize(gradients, dim=-1)  # [B,R,N,3]
         rgbs = self.neural_rgb.forward(points, normals, rays_unit, feats, app=app)  # [B,R,N,3]
         # SDF volume rendering.
