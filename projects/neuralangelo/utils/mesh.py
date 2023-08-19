@@ -41,7 +41,8 @@ def extract_mesh(sdf_func, bounds, intv, block_res=64, texture_func=None):
     else:
         mesh_blocks_gather = [mesh_blocks]
     if is_master():
-        mesh_blocks_all = [mesh for mesh_blocks in mesh_blocks_gather for mesh in mesh_blocks if mesh.vertices.shape[0] > 0]
+        mesh_blocks_all = [mesh for mesh_blocks in mesh_blocks_gather for mesh in mesh_blocks
+                           if mesh.vertices.shape[0] > 0]
         mesh = trimesh.util.concatenate(mesh_blocks_all)
         return mesh
     else:
@@ -56,12 +57,13 @@ def extract_texture(xyz, neural_rgb, neural_sdf, appear_embed):
     gradients, _ = neural_sdf.compute_gradients(xyz_cuda, training=False, sdf=sdfs)
     normals = torch_F.normalize(gradients, dim=-1)
     if appear_embed is not None:
-        feat_dim = appear_embed.embedding_dim  # [1,1,N,C] 
+        feat_dim = appear_embed.embedding_dim  # [1,1,N,C]
         app = torch.zeros([1, 1, num_samples, feat_dim], device=sdfs.device)  # TODO: hard-coded to zero. better way?
     else:
         app = None
     rgbs = neural_rgb.forward(xyz_cuda, normals, -normals, feats, app=app)  # [1,1,N,3]
     return (rgbs.squeeze().cpu().numpy() * 255).astype(np.uint8)
+
 
 class LatticeGrid(torch.utils.data.Dataset):
 

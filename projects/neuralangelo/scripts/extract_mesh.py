@@ -21,7 +21,6 @@ sys.path.append(os.getcwd())
 from imaginaire.config import Config, recursive_update_strict, parse_cmdline_arguments  # noqa: E402
 from imaginaire.utils.distributed import init_dist, get_world_size, is_master, master_only_print as print  # noqa: E402
 from imaginaire.utils.gpu_affinity import set_affinity  # noqa: E402
-from imaginaire.trainers.utils.logging import init_logging  # noqa: E402
 from imaginaire.trainers.utils.get_trainer import get_trainer  # noqa: E402
 from projects.neuralangelo.utils.mesh import extract_mesh, extract_texture  # noqa: E402
 
@@ -81,12 +80,12 @@ def main():
     else:
         bounds = np.array([[-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0]])
 
-    sdf_func = lambda x: -trainer.model_module.neural_sdf.sdf(x)
-    texture_func = partial(extract_texture, neural_sdf=trainer.model_module.neural_sdf, 
-                           neural_rgb=trainer.model_module.neural_rgb, 
+    sdf_func = lambda x: -trainer.model_module.neural_sdf.sdf(x)  # noqa: E731
+    texture_func = partial(extract_texture, neural_sdf=trainer.model_module.neural_sdf,
+                           neural_rgb=trainer.model_module.neural_rgb,
                            appear_embed=trainer.model_module.appear_embed) if args.textured else None
 
-    mesh = extract_mesh(sdf_func=sdf_func, bounds=bounds, 
+    mesh = extract_mesh(sdf_func=sdf_func, bounds=bounds,
                         intv=(2.0 / args.resolution), block_res=args.block_res,
                         texture_func=texture_func)
 
