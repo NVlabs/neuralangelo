@@ -95,11 +95,14 @@ Some useful notes:
     | GPU VRAM      | Hyperparameter          |
     | :-----------: | :---------------------: |
     | 8GB           | `dict_size=20`, `dim=4` |
+    | 12GB          | `dict_size=21`, `dim=4` |
     | 16GB          | `dict_size=21`, `dim=8` |
 
     Please note that the above hyperparameter adjustment may sacrifice the reconstruction quality.
 
-2. **Q:** The reconstruction of my custom dataset is bad. What can I do?  
+   If Neuralangelo runs fine during training but CUDA out of memory during evaluation, consider adjusting the evaluation parameters under `data.val`, including setting smaller `image_size` (e.g., maximum resolution 200x200), and setting `batch_size=1`, `subset=1`.
+
+3. **Q:** The reconstruction of my custom dataset is bad. What can I do?  
     **A:** It is worth looking into the following:
     - The camera poses recovered by COLMAP may be off. We have implemented tools (using [Blender](https://github.com/mli0603/BlenderNeuralangelo) or [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb)) to inspect the COLMAP results.
     - The computed bounding regions may be off and/or too small/large. Please refer to [data preprocessing](DATA_PROCESSING.md) on how to adjust the bounding regions manually.
