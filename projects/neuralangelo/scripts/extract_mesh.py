@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import numpy as np
+from functools import partial
 
 sys.path.append(os.getcwd())
 from imaginaire.config import Config, recursive_update_strict, parse_cmdline_arguments  # noqa: E402
@@ -22,19 +23,19 @@ from imaginaire.utils.distributed import init_dist, get_world_size, is_master, m
 from imaginaire.utils.gpu_affinity import set_affinity  # noqa: E402
 from imaginaire.trainers.utils.logging import init_logging  # noqa: E402
 from imaginaire.trainers.utils.get_trainer import get_trainer  # noqa: E402
-from projects.neuralangelo.utils.mesh import extract_mesh  # noqa: E402
+from projects.neuralangelo.utils.mesh import extract_mesh, extract_texture  # noqa: E402
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Training")
     parser.add_argument("--config", required=True, help="Path to the training config file.")
-    parser.add_argument("--logdir", help="Dir for saving logs and models.")
     parser.add_argument("--checkpoint", default="", help="Checkpoint path.")
     parser.add_argument('--local_rank', type=int, default=os.getenv('LOCAL_RANK', 0))
     parser.add_argument('--single_gpu', action='store_true')
     parser.add_argument("--resolution", default=512, type=int, help="Marching cubes resolution")
     parser.add_argument("--block_res", default=64, type=int, help="Block-wise resolution for marching cubes")
     parser.add_argument("--output_file", default="mesh.ply", type=str, help="Output file name")
+    parser.add_argument("--textured", action="store_true", help="Export mesh with texture")
     args, cfg_cmd = parser.parse_known_args()
     return args, cfg_cmd
 
@@ -56,7 +57,7 @@ def main():
         init_dist(cfg.local_rank, rank=-1, world_size=-1)
     print(f"Running mesh extraction with {get_world_size()} GPUs.")
 
-    cfg.logdir = init_logging(args.config, args.logdir, makedir=True)
+    cfg.logdir = ''
 
     # Initialize data loaders and models.
     trainer = get_trainer(cfg, is_inference=True, seed=0)
@@ -80,14 +81,25 @@ def main():
     else:
         bounds = np.array([[-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0]])
 
-    mesh = extract_mesh(sdf_func=lambda x: -trainer.model_module.neural_sdf.sdf(x),
-                        bounds=bounds, intv=(2.0 / args.resolution), block_res=args.block_res)
+    sdf_func = lambda x: -trainer.model_module.neural_sdf.sdf(x)
+    texture_func = partial(extract_texture, neural_sdf=trainer.model_module.neural_sdf, 
+                           neural_rgb=trainer.model_module.neural_rgb, 
+                           appear_embed=trainer.model_module.appear_embed) if args.textured else None
+
+    mesh = extract_mesh(sdf_func=sdf_func, bounds=bounds, 
+                        intv=(2.0 / args.resolution), block_res=args.block_res,
+                        texture_func=texture_func)
 
     if is_master():
         print(f"vertices: {len(mesh.vertices)}")
         print(f"faces: {len(mesh.faces)}")
+        if args.textured:
+            print(f"colors: {len(mesh.visual.vertex_colors)}")
+            print(mesh.vertices[0], mesh.vertices[100], mesh.vertices[1000])
+            print(mesh.visual.vertex_colors[0], mesh.visual.vertex_colors[100], mesh.visual.vertex_colors[1000])
         # center and scale
         mesh.vertices = mesh.vertices * meta["sphere_radius"] + np.array(meta["sphere_center"])
+        mesh.remove_degenerate_faces()
         mesh.export(args.output_file)
 
 
