@@ -85,25 +85,21 @@ torchrun --nproc_per_node=${GPUS} projects/neuralangelo/scripts/extract_mesh.py 
 --------------------------------------
 
 ## Frequently asked questions (FAQ)
-**Q:** CUDA out of memory. How do I decrease the memory footprint?
-   
-**A:** Neuralangelo requires 24 VRAM GPUs. If you run out of memory, you may follow the guidelines below to modify hyperparameters to make Neuralangelo fit into your GPU:
+1. **Q:** CUDA out of memory. How do I decrease the memory footprint?  
+    **A:** Neuralangelo requires at least 24GB GPU memory with our default configuration. If you run out of memory, consider adjusting the following hyperparameters under `model.object.sdf.encoding.hashgrid` (with suggested values):
 
-| GPU VRAM      | Hyperparameter |
-| :-----------: | :------------: |
-| 8GB           | [dict_size](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L59)=20, [dim](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L60)=4 |
-| 16GB          | [dict_size](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L59)=21, [dim](https://github.com/NVlabs/neuralangelo/blob/2213bb3733267c021f8cbf7651bcb39b4804d4d9/projects/neuralangelo/configs/base.yaml#L60)=8 |
+    | GPU VRAM      | Hyperparameter          |
+    | :-----------: | :---------------------: |
+    | 8GB           | `dict_size=20`, `dim=4` |
+    | 16GB          | `dict_size=21`, `dim=8` |
 
-Please note that the above hyperparameter adjustment may sacrifice the reconstruction quality.
+    Please note that the above hyperparameter adjustment may sacrifice the reconstruction quality.
 
-<hr>
-
-**Q:** The reconstruction of my custom dataset is bad. What can I do?
-
-**A:** It is worth looking into the following:
-- The camera poses recovered by COLMAP are off. We have implemented an [external software](https://github.com/mli0603/BlenderNeuralangelo) to inspect the COLMAP result.
-- The computed bounding regions are too big/small. Please refer to [Step 5 of Data Preprocessing](https://github.com/NVlabs/neuralangelo/blob/main/DATA_PROCESSING.md) on how to adjust the bounding regions manually.
-- The video capture sequence has many motion blur and out-of-focus frames. Higher shutter speed (reducing motion blur) and smaller aperture (increasing focus range) are very helpful.
+2. **Q:** The reconstruction of my custom dataset is bad. What can I do?  
+    **A:** It is worth looking into the following:
+    - The camera poses recovered by COLMAP may be off. We have implemented tools (using [Blender](https://github.com/mli0603/BlenderNeuralangelo) or [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb)) to inspect the COLMAP results.
+    - The computed bounding regions may be off and/or too small/large. Please refer to [data preprocessing](DATA_PROCESSING.md) on how to adjust the bounding regions manually.
+    - The video capture sequence may contain significant motion blur or out-of-focus frames. Higher shutter speed (reducing motion blur) and smaller aperture (increasing focus range) are very helpful.
 
 --------------------------------------
 

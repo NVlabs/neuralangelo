@@ -9,7 +9,9 @@ git submodule update --init --recursive
 ```
 
 ## Self-captured video sequence
-To capture your own data, we recommend using a high-shutter speed to avoid motion blur (which is very common when using a phone camera). To follow the instructions below, you can download a toy example from the link: https://drive.google.com/file/d/1VJeWYNJEBK0MFIzHjI8xZzwf3_I3eLwH/view?usp=drive_link
+To capture your own data, we recommend using a high shutter speed to avoid motion blur (which is very common when using a phone camera). A [toy example](https://drive.google.com/file/d/1VJeWYNJEBK0MFIzHjI8xZzwf3_I3eLwH/view?usp=drive_link) is provided for testing the workflow. There are two steps:
+1. [preprocessing](#preprocessing) the data and running COLMAP,
+2. [inspecting](#inspect-and-adjust-colmap-results) and refining the bounding sphere of interest for running Neuralangelo.
 
 ### Preprocessing
 You can run the following command to preprocess your data:
@@ -81,13 +83,15 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
     ```
     You can also manually adjust the parameters in the yaml file directly.
 
-5. Inspect results in Blender (optional but recommended)
+### Inspect and adjust COLMAP results
 
-    For certain cases, the camera poses estimated by COLMAP could be wrong, and the bounding region estimation could be off.
-    We offer some tools to to inspect the pre-processing results. Below are some options:
+For certain cases, the camera poses estimated by COLMAP could be erroneous. In addition, the automated estimation of the bounding sphere could be inaccurate (which ideally should include the scene/object of interest).
+We offer some tools to to inspect and adjust the pre-processing results. Below are some options:
 
-    - Blender: Download [Blender](https://www.blender.org/download/) and follow the instructions in our [add-on repo](https://github.com/mli0603/BlenderNeuralangelo).
-    - This [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb) (using K3D) can be helpful for visualizing the COLMAP results.
+- Blender: Download [Blender](https://www.blender.org/download/) and follow the instructions in our [add-on repo](https://github.com/mli0603/BlenderNeuralangelo).
+- This [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb) (using K3D) can be helpful for visualizing the COLMAP results.
+
+It is highly recommended that the bounding sphere is adjusted. You can do so by manually specifying the refining sphere center and size in the `data.readjust` config.
 
 ## DTU dataset
 - Please use respecting the license terms of the dataset.

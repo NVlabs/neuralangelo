@@ -67,7 +67,7 @@ class Trainer(BaseTrainer):
                 decay_factor = model.neural_sdf.growth_rate ** model.neural_sdf.add_levels  # TODO: verify?
                 self.get_curvature_weight(current_iteration, self.cfg.trainer.loss_weight.curvature, decay_factor)
             model.neural_sdf.set_normal_epsilon()
-        
+
         return super()._start_of_iteration(data, current_iteration)
 
     @master_only
