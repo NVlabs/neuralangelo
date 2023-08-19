@@ -82,6 +82,10 @@ torchrun --nproc_per_node=${GPUS} projects/neuralangelo/scripts/extract_mesh.py 
     --resolution=${RESOLUTION} \
     --block_res=${BLOCK_RES}
 ```
+Some useful notes:
+- Add `--textured` to extract meshes with textures.
+- Lower `BLOCK_RES` to reduce GPU memory usage.
+- Lower `RESOLUTION` to reduce mesh size.
 
 --------------------------------------
 
