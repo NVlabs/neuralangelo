@@ -164,7 +164,7 @@ def align_gt_with_cam(pts, trans):
 
 
 def compute_bound(pts):
-    bounding_box = np.array([pts.max(axis=0), pts.min(axis=0)])
+    bounding_box = np.array([pts.min(axis=0), pts.max(axis=0)])
     center = bounding_box.mean(axis=0)
     radius = np.max(np.linalg.norm(pts - center, axis=-1)) * 1.01
     return center, radius, bounding_box.T.tolist()
