@@ -13,8 +13,6 @@ checkpoints
 # Credential information that should never be checked in
 *.secret
 
-scripts/wandb/_staff/
-
 # Data types
 *.png
 *.hdr
@@ -30,12 +28,14 @@ scripts/wandb/_staff/
 *.pkl
 *.pt
 *.bin
+*.ply
 
 # log folder
 logs/
 
 # dataset folder
 datasets/
+/datasets/
 
 # config folder
 !projects/neuralangelo/configs/custom/template.yaml
