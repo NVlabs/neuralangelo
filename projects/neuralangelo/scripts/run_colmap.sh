@@ -21,7 +21,7 @@ colmap feature_extractor \
     --SiftExtraction.num_threads=32 \
     --ImageReader.single_camera=true # assuming single camera
 
-colmap exhaustive_matcher \
+colmap sequential_matcher \
     --database_path ${1}/database.db \
     --SiftMatching.use_gpu=true
 
