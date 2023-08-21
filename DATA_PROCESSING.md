@@ -19,7 +19,7 @@ You can run the following command to preprocess your data:
 ```bash
 EXPERIMENT_NAME=toy_example
 PATH_TO_VIDEO=toy_example.MOV
-SKIP_FRAME_RATE=24
+SKIP_FRAME_RATE=4  # If video motion is small, set this to large values (e.g., 24). If video motion is large, set this to small values (e.g., 4).
 SCENE_TYPE=object  # {outdoor,indoor,object}
 bash projects/neuralangelo/scripts/preprocess.sh ${EXPERIMENT_NAME} ${PATH_TO_VIDEO} ${SKIP_FRAME_RATE} ${SCENE_TYPE}
 ```
@@ -30,7 +30,7 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
 
     ```bash
     PATH_TO_VIDEO=toy_example.MOV
-    SKIP_FRAME_RATE=30
+    SKIP_FRAME_RATE=4  # If video motion is small, set this to large values (e.g., 24). If video motion is large, set this to small values (e.g., 4).
     bash projects/neuralangelo/scripts/run_ffmpeg.sh ${PATH_TO_VIDEO} ${SKIP_FRAME_RATE}
     ```
     `PATH_TO_VIDEO`: path to video  
@@ -39,7 +39,7 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
 2. Run COLMAP
 
     ```bash
-    PATH_TO_IMAGES=toy_example_skip30
+    PATH_TO_IMAGES=datasets/toy_example_skip4
     bash projects/neuralangelo/scripts/run_colmap.sh ${PATH_TO_IMAGES}
     ```
     `PATH_TO_IMAGES`: path to extracted images
@@ -61,7 +61,7 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
     In this step, we define the bounding region for reconstruction and convert the COLMAP data to json format following Instant NGP. We strongly recommend you go to step 5 to validate the quality of the automatic bounding region extraction for improved performance.
 
     ```bash
-    PATH_TO_IMAGES=toy_example_skip30
+    PATH_TO_IMAGES=datasets/toy_example_skip4
     SCENE_TYPE=object  # {outdoor,indoor,object}
     python3 projects/neuralangelo/scripts/convert_data_to_json.py --data_dir ${PATH_TO_IMAGES}/dense --scene_type ${SCENE_TYPE}
     ```
@@ -73,7 +73,7 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
     ```bash
     EXPERIMENT_NAME=toy_example
     SCENE_TYPE=object  # {outdoor,indoor,object}
-    python3 projects/neuralangelo/scripts/generate_config.py --experiment_name ${EXPERIMENT_NAME} --data_dir ${PATH_TO_IMAGES}/dense --scene_type ${SCENE_TYPE} --auto_exposure_wb
+    python3 projects/neuralangelo/scripts/generate_config.py --experiment_name ${EXPERIMENT_NAME} --data_dir ${PATH_TO_IMAGES}/dense --scene_type ${SCENE_TYPE}
     ```
     The config file will be generated as `projects/neuralangelo/configs/custom/{EXPERIMENT_NAME}.yaml`.
 
@@ -85,13 +85,13 @@ Alternatively, you can follow the steps below if you want more fine-grained cont
 
 ### Inspect and adjust COLMAP results
 
-For certain cases, the camera poses estimated by COLMAP could be erroneous. In addition, the automated estimation of the bounding sphere could be inaccurate (which ideally should include the scene/object of interest).
+For certain cases, the camera poses estimated by COLMAP could be erroneous. In addition, the automated estimation of the bounding sphere could be inaccurate (which ideally should include the scene/object of interest). It is highly recommended that the bounding sphere is adjusted. 
 We offer some tools to to inspect and adjust the pre-processing results. Below are some options:
 
-- Blender: Download [Blender](https://www.blender.org/download/) and follow the instructions in our [add-on repo](https://github.com/mli0603/BlenderNeuralangelo).
-- This [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb) (using K3D) can be helpful for visualizing the COLMAP results.
+- Blender: Download [Blender](https://www.blender.org/download/) and follow the instructions in our [add-on repo](https://github.com/mli0603/BlenderNeuralangelo). The add-on will save your adjustment of the bounding sphere.
+- This [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb) (using K3D) can be helpful for visualizing the COLMAP results. You can adjust the bounding sphere by manually specifying the refining sphere center and size in the `data.readjust` config.
 
-It is highly recommended that the bounding sphere is adjusted. You can do so by manually specifying the refining sphere center and size in the `data.readjust` config.
+If a continous camera recording trajectory turns into broken trajectories, it is because COLMAP fails due to ambiguous matches. You can try to change `exhaustive_matcher` to `sequential_matcher` in [run_colmap.sh file](https://github.com/NVlabs/neuralangelo/blob/main/projects/neuralangelo/scripts/run_colmap.sh#L24).
 
 ## DTU dataset
 - Please use respecting the license terms of the dataset.
