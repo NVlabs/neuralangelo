@@ -1,5 +1,7 @@
 # Data Preparation
 
+*Note: please use respecting the license terms of each dataset. Each user is responsible for checking the content of datasets and the applicable licenses and determining if suitable for the intended use.*
+
 The following sections provide a step-by-step guide on how to convert a video to a json file that Neuralangelo parses.
 
 ## Prerequisites
@@ -9,7 +11,7 @@ git submodule update --init --recursive
 ```
 
 ## Self-captured video sequence
-To capture your own data, we recommend using a high shutter speed to avoid motion blur (which is very common when using a phone camera). We provide a synthetic [Lego sequence](https://drive.google.com/file/d/1yWoZ4Hk3FgmV3pd34ZbW7jEqgqyJgzHy/view?usp=drive_link) (from the original NeRF) as a toy example video for testing the workflow. There are two steps:
+To capture your own data, we recommend using a high shutter speed to avoid motion blur (which is very common when using a phone camera). We provide a synthetic [Lego sequence](https://drive.google.com/file/d/1yWoZ4Hk3FgmV3pd34ZbW7jEqgqyJgzHy/view?usp=drive_link) (from the original [NeRF](https://github.com/bmild/nerf)) as a toy example video for testing the workflow. There are two steps:
 1. [preprocessing](#preprocessing) the data and running COLMAP,
 2. [inspecting](#inspect-and-adjust-colmap-results) and refining the bounding sphere of interest for running Neuralangelo.
 
@@ -97,8 +99,6 @@ However, this would take more time to process and could sometimes result in "bro
 For more details, please refer to the COLMAP [documentation](https://colmap.github.io/).
 
 ## DTU dataset
-- Please use respecting the license terms of the dataset.
-
 You can run the following command to download [the DTU dataset](https://roboimagedata.compute.dtu.dk/?page_id=36) that is preprocessed by NeuS authors and generate json files:
 ```bash
 PATH_TO_DTU=datasets/dtu  # Modify this to be the DTU dataset root directory.
@@ -106,8 +106,6 @@ bash projects/neuralangelo/scripts/preprocess_dtu.sh ${PATH_TO_DTU}
 ```
 
 ## Tanks and Temples dataset
-- Please use respecting the license terms of the dataset.
-
 Download the data from [Tanks and Temples](https://tanksandtemples.org/download/) website.
 You will also need to download additional [COLMAP/camera/alignment](https://drive.google.com/file/d/1jAr3IDvhVmmYeDWi0D_JfgiHcl70rzVE/view?resourcekey=) and the images of each scene.  
 The file structure should look like (you may need to move around the downloaded images):
