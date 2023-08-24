@@ -17,6 +17,7 @@ opencv-python-headless
 OpenEXR
 pathlib
 pillow
+plotly
 pyequilib
 pyexr
 PyMCubes

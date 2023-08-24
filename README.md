@@ -70,7 +70,7 @@ Use the following command to run isosurface mesh extraction:
 ```bash
 CHECKPOINT=logs/${GROUP}/${NAME}/xxx.pt
 OUTPUT_MESH=xxx.ply
-CONFIG=projects/neuralangelo/configs/custom/${EXPERIMENT}.yaml
+CONFIG=logs/${GROUP}/${NAME}/config.yaml
 RESOLUTION=2048
 BLOCK_RES=128
 GPUS=1  # use >1 for multi-GPU mesh extraction
@@ -102,7 +102,7 @@ Some useful notes:
 
    If Neuralangelo runs fine during training but CUDA out of memory during evaluation, consider adjusting the evaluation parameters under `data.val`, including setting smaller `image_size` (e.g., maximum resolution 200x200), and setting `batch_size=1`, `subset=1`.
 
-3. **Q:** The reconstruction of my custom dataset is bad. What can I do?  
+2. **Q:** The reconstruction of my custom dataset is bad. What can I do?  
     **A:** It is worth looking into the following:
     - The camera poses recovered by COLMAP may be off. We have implemented tools (using [Blender](https://github.com/mli0603/BlenderNeuralangelo) or [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb)) to inspect the COLMAP results.
     - The computed bounding regions may be off and/or too small/large. Please refer to [data preprocessing](DATA_PROCESSING.md) on how to adjust the bounding regions manually.

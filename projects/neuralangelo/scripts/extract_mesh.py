@@ -94,8 +94,6 @@ def main():
         print(f"faces: {len(mesh.faces)}")
         if args.textured:
             print(f"colors: {len(mesh.visual.vertex_colors)}")
-            print(mesh.vertices[0], mesh.vertices[100], mesh.vertices[1000])
-            print(mesh.visual.vertex_colors[0], mesh.visual.vertex_colors[100], mesh.visual.vertex_colors[1000])
         # center and scale
         mesh.vertices = mesh.vertices * meta["sphere_radius"] + np.array(meta["sphere_center"])
         mesh.remove_degenerate_faces()

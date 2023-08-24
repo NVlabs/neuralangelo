@@ -8,9 +8,9 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # -----------------------------------------------------------------------------
 
-# usage: run_ffmpeg.sh <full_fname.mp4> <skip_frames>
+# usage: run_ffmpeg.sh <sequence_name> <full_video_path> <downsample_rate>
 
-base_name=$(basename ${1})
-image_path=datasets/${base_name%.*}_skip${2}/raw_images
+data_path=datasets/${1}_ds${3}
+image_path=${data_path}/images_raw
 mkdir -p ${image_path}
-ffmpeg -i $1 -vf "select=not(mod(n\,$2))" -vsync vfr -q:v 2 ${image_path}/%06d.jpg
+ffmpeg -i ${2} -vf "select=not(mod(n\,$3))" -vsync vfr -q:v 2 ${image_path}/%06d.jpg
