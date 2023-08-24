@@ -59,16 +59,16 @@ def generate_config(args):
     cfg.data.readjust.center = [0., 0., 0.]
     cfg.data.readjust.scale = 1.
     # export cfg
-    cfg_fname = os.path.join(dir_path, "projects/neuralangelo/configs", f"custom/{args.experiment_name}.yaml")
+    cfg_fname = os.path.join(dir_path, "projects/neuralangelo/configs", f"custom/{args.sequence_name}.yaml")
     with open(cfg_fname, "w") as file:
         yaml.safe_dump(cfg.to_dict(), file, default_flow_style=False, indent=4)
-    print("Config generated to file: ", cfg_fname)
+    print("Config generated to file:", cfg_fname)
     return
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--experiment_name", type=str, default="recon", help="Name of experiment")
+    parser.add_argument("--sequence_name", type=str, default="recon", help="Name of sequence")
     parser.add_argument("--data_dir", type=str, default=None, help="Path to data")
     parser.add_argument("--auto_exposure_wb", action="store_true",
                         help="Video capture with auto-exposure or white-balance")

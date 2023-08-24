@@ -2,7 +2,7 @@
 
 *Note: please use respecting the license terms of each dataset. Each user is responsible for checking the content of datasets and the applicable licenses and determining if suitable for the intended use.*
 
-The following sections provide a step-by-step guide on how to convert a video to a json file that Neuralangelo parses.
+The following sections provide a guide on how to preprocess input videos for Neuralangelo.
 
 ## Prerequisites
 Initialize the COLMAP submodule:
@@ -16,74 +16,79 @@ To capture your own data, we recommend using a high shutter speed to avoid motio
 2. [inspecting](#inspect-and-adjust-colmap-results) and refining the bounding sphere of interest for running Neuralangelo.
 
 ### Preprocessing
-You can run the following command to preprocess your data:
-
+First, set some environment variables:
 ```bash
-EXPERIMENT=lego
+SEQUENCE=lego
 PATH_TO_VIDEO=lego.mp4
-SKIP_FRAME_RATE=2  # Set this to a larger value (e.g. 24) for small video motions and smaller value (e.g.) for large video motions.
-SCENE_TYPE=object  # {outdoor,indoor,object}
-bash projects/neuralangelo/scripts/preprocess.sh ${EXPERIMENT} ${PATH_TO_VIDEO} ${SKIP_FRAME_RATE} ${SCENE_TYPE}
+DOWNSAMPLE_RATE=2
+SCENE_TYPE=object
 ```
+where
+- `SEQUENCE`: your custom name for the video sequence.
+- `PATH_TO_VIDEO`: absolute/relative path to your video.
+- `DOWNSAMPLE_RATE`: temporal downsampling rate of video sequence (for extracting video frames).
+- `SCENE_TYPE`: can be one of ` {outdoor,indoor,object}`.
 
-Alternatively, you can follow the steps below if you want more fine-grained control.
+To preprocess your data, you can choose to either
 
-1. Convert video to images
-
+- Run the following end-to-end script:
     ```bash
-    PATH_TO_VIDEO=lego.mp4
-    SKIP_FRAME_RATE=2  # Set this to a larger value (e.g. 24) for small video motions and smaller value (e.g.) for large video motions.
-    bash projects/neuralangelo/scripts/run_ffmpeg.sh ${PATH_TO_VIDEO} ${SKIP_FRAME_RATE}
+    bash projects/neuralangelo/scripts/preprocess.sh ${SEQUENCE} ${PATH_TO_VIDEO} ${DOWNSAMPLE_RATE} ${SCENE_TYPE}
     ```
-    `PATH_TO_VIDEO`: path to video  
-    `SKIP_FRAME_RATE`: downsampling rate (recommended 10 for 24 fps captured videos)
 
-2. Run COLMAP
+- Or you can follow the steps below if you want more fine-grained control:
 
-    ```bash
-    PATH_TO_IMAGES=datasets/lego_skip2
-    bash projects/neuralangelo/scripts/run_colmap.sh ${PATH_TO_IMAGES}
-    ```
-    `PATH_TO_IMAGES`: path to extracted images
+    1. Extract images from the input video
 
-    After COLMAP finishes, the folder structure will look like following:
-    ```bash
-    PATH_TO_IMAGES
-    |__ database.db (COLMAP databse)
-    |__ raw_images (raw input images)
-    |__ dense
-    |____ images (undistorted images)
-    |____ sparse (COLMAP correspondences, intrinsics and sparse point cloud)
-    |____ stereo (COLMAP files for MVS)
-    ```
-    `dense/images` will be the input for surface reconstruction.
+        ```bash
+        bash projects/neuralangelo/scripts/run_ffmpeg.sh ${SEQUENCE} ${PATH_TO_VIDEO} ${DOWNSAMPLE_RATE}
+        ```
+        This will create a directory `datasets/{SEQUENCE}_ds{DOWNSAMPLE_RATE}` (set as `DATA_PATH` onwards), which stores all the processed data.
+        The extracted images will be stored in `{DATA_PATH}/images_raw`.
 
-3. Generate json file for data loading
+    2. Run COLMAP
 
-    In this step, we define the bounding region for reconstruction and convert the COLMAP data to json format following Instant NGP. We strongly recommend you go to step 5 to validate the quality of the automatic bounding region extraction for improved performance.
+        ```bash
+        DATA_PATH=datasets/${SEQUENCE}_ds${DOWNSAMPLE_RATE}
+        bash projects/neuralangelo/scripts/run_colmap.sh ${DATA_PATH}
+        ```
+        `DATA_PATH`: path to processed data.
 
-    ```bash
-    PATH_TO_IMAGES=datasets/lego_skip2
-    SCENE_TYPE=object  # {outdoor,indoor,object}
-    python3 projects/neuralangelo/scripts/convert_data_to_json.py --data_dir ${PATH_TO_IMAGES}/dense --scene_type ${SCENE_TYPE}
-    ```
-    `PATH_TO_IMAGES`: path to extracted images
+        After COLMAP finishes, the folder structure will look like following:
+        ```
+        DATA_PATH
+        ├─ database.db      (COLMAP database)
+        ├─ images           (undistorted input images)
+        ├─ images_raw       (raw input images)
+        ├─ sparse           (COLMAP data from SfM)
+        │  ├─ cameras.bin   (camera parameters)
+        │  ├─ images.bin    (images and camera poses)
+        │  ├─ points3D.bin  (sparse point clouds)
+        │  ├─ 0             (a directory containing individual SfM models. There could also be 1, 2... etc.)
+        │  ...
+        ├─ stereo (COLMAP data for MVS, not used here)
+        ...
+        ```
+        `{DATA_PATH}/images` will be the input image observations for surface reconstruction.
 
-4. Config files
+    3. Generate JSON file for data loading
 
-    Use the following to configure and generate your config files
-    ```bash
-    EXPERIMENT=lego
-    SCENE_TYPE=object  # {outdoor,indoor,object}
-    python3 projects/neuralangelo/scripts/generate_config.py --experiment_name ${EXPERIMENT} --data_dir ${PATH_TO_IMAGES}/dense --scene_type ${SCENE_TYPE}
-    ```
-    The config file will be generated as `projects/neuralangelo/configs/custom/{EXPERIMENT}.yaml`.
+        In this step, we define the bounding region for reconstruction and convert the COLMAP data to JSON format following Instant NGP.
+        It is strongly recommended to [inspect](#inspect-and-adjust-colmap-results) the results to verify and adjust the bounding region for improved performance.
+        ```bash
+        python3 projects/neuralangelo/scripts/convert_data_to_json.py --data_dir ${DATA_PATH} --scene_type ${SCENE_TYPE}
+        ```
+        The JSON file will be generated in `{DATA_PATH}/transforms.json`.
 
-    To find more arguments and how they work:
-    ```bash
-    python3 projects/neuralangelo/scripts/generate_config.py -h
-    ```
-    You can also manually adjust the parameters in the yaml file directly.
+    4. Config files
+
+        Use the following to configure and generate your config files:
+        ```bash
+        python3 projects/neuralangelo/scripts/generate_config.py --sequence_name ${SEQUENCE} --data_dir ${DATA_PATH} --scene_type ${SCENE_TYPE}
+        ```
+        The config file will be generated as `projects/neuralangelo/configs/custom/{SEQUENCE}.yaml`.
+        You can add the `--help` flag to list all arguments; for example, consider adding `--auto_exposure_wb` for modeling varying lighting/appearances in the video.
+        Alternatively, you can directly modify the hyperparameters in the generated config file.
 
 ### Inspect and adjust COLMAP results
 
@@ -112,11 +117,11 @@ The file structure should look like (you may need to move around the downloaded 
 ```
 tanks_and_temples
 ├─ Barn
-│  ├─ Barn_COLMAP_SfM.log (camera poses)
-│  ├─ Barn.json (cropfiles)
-│  ├─ Barn.ply (ground-truth point cloud)
-│  ├─ Barn_trans.txt (colmap-to-ground-truth transformation)
-│  └─ images (folder of images)
+│  ├─ Barn_COLMAP_SfM.log   (camera poses)
+│  ├─ Barn.json             (cropfiles)
+│  ├─ Barn.ply              (ground-truth point cloud)
+│  ├─ Barn_trans.txt        (colmap-to-ground-truth transformation)
+│  └─ images                (folder of images)
 │     ├─ 000001.png
 │     ├─ 000002.png
 │     ...
