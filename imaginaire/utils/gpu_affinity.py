@@ -77,5 +77,5 @@ def set_affinity(gpu_id=None):
         # representing the logical cores this process is now affinitied with
         return os.sched_getaffinity(0)
 
-    except pynvml.nvml.NVMLError:
+    except pynvml.NVMLError:
         print("(Setting affinity with NVML failed, skipping...)")
