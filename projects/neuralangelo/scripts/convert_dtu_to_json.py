@@ -21,9 +21,10 @@ import math
 import sys
 from pathlib import Path
 
+
 dir_path = Path(os.path.dirname(os.path.realpath(__file__))).parents[2]
 sys.path.append(dir_path.__str__())
-from projects.neuralangelo.utils import misc  # NOQA
+from projects.neuralangelo.scripts.convert_data_to_json import _cv_to_gl  # noqa: E402
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -85,7 +86,7 @@ def dtu_to_json(args):
             P = world_mat @ scale_mat
             P = P[:3, :4]
             intrinsic_param, c2w = load_K_Rt_from_P(None, P)
-            c2w_gl = misc.cv_to_gl(c2w)
+            c2w_gl = _cv_to_gl(c2w)
 
             frame = {"file_path": 'image/' + image, "transform_matrix": c2w_gl.tolist()}
             out["frames"].append(frame)
@@ -115,10 +116,8 @@ def dtu_to_json(args):
             "w": int(w),
             "h": int(h),
             "aabb_scale": np.exp2(np.rint(np.log2(scale_mat[0, 0]))),  # power of two, for INGP resolution computation
-            "sphere_center": [scale_mat[0, -1], scale_mat[1, -1], scale_mat[2, -1]],
-            "sphere_radius": scale_mat[0, 0],
-            "centered": True,
-            "scaled": True,
+            "sphere_center": [0., 0., 0.],
+            "sphere_radius": 1.,
         })
 
         file_path = os.path.join(scene_path, 'transforms.json')

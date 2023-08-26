@@ -25,16 +25,6 @@ flip_mat = np.array([
 ])
 
 
-def cv_to_gl(cv):
-    gl = cv @ flip_mat  # convert to GL convention used in iNGP
-    return gl
-
-
-def gl_to_cv(gl):
-    cv = gl @ np.linalg.inv(flip_mat)  # convert to CV convention used in Imaginaire
-    return cv
-
-
 def get_scheduler(cfg_opt, opt):
     """Return the scheduler object.
 

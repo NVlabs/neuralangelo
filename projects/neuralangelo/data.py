@@ -18,7 +18,6 @@ from PIL import Image, ImageFile
 
 from projects.nerf.datasets import base
 from projects.nerf.utils import camera
-from projects.neuralangelo.utils.misc import gl_to_cv
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -106,19 +105,15 @@ class Dataset(base.Dataset):
                              [0, 0, 1]]).float()
         # Camera pose.
         c2w_gl = torch.tensor(self.list[idx]["transform_matrix"], dtype=torch.float32)
-        c2w = gl_to_cv(c2w_gl)
-        if not self.meta['centered']:
-            # center scene
-            center = np.array(self.meta["sphere_center"])
-            if self.readjust:
-                center += np.array(getattr(self.readjust, "center", [0]))
-            c2w[:3, -1] -= center
-        if not self.meta['scaled']:
-            # scale scene
-            scale = np.array(self.meta["sphere_radius"])
-            if self.readjust:
-                scale *= getattr(self.readjust, "scale", 1.)
-            c2w[:3, -1] /= scale
+        c2w = self._gl_to_cv(c2w_gl)
+        # center scene
+        center = np.array(self.meta["sphere_center"])
+        center += np.array(getattr(self.readjust, "center", [0])) if self.readjust else 0.
+        c2w[:3, -1] -= center
+        # scale scene
+        scale = np.array(self.meta["sphere_radius"])
+        scale *= getattr(self.readjust, "scale", 1.) if self.readjust else 1.
+        c2w[:3, -1] /= scale
         w2c = camera.Pose().invert(c2w[:3])
         return intr, w2c
 
@@ -129,3 +124,8 @@ class Dataset(base.Dataset):
         intr[0] *= self.W / raw_W
         intr[1] *= self.H / raw_H
         return intr, pose
+
+    def _gl_to_cv(self, gl):
+        # convert to CV convention used in Imaginaire
+        cv = gl * torch.tensor([1, -1, -1, 1])
+        return cv

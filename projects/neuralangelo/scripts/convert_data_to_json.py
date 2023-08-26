@@ -90,6 +90,12 @@ def bound_by_points(points3D):
     return center, radius, bounding_box
 
 
+def _cv_to_gl(cv):
+    # convert to GL convention used in iNGP
+    gl = cv * np.array([1, -1, -1, 1])
+    return gl
+
+
 def export_to_json(cameras, images, bounding_box, center, radius, file_path):
     intrinsic_param = np.array([camera.params for camera in cameras.values()])
     fl_x = intrinsic_param[0][0]  # TODO: only supports single camera for now
@@ -126,17 +132,8 @@ def export_to_json(cameras, images, bounding_box, center, radius, file_path):
         "aabb_range": bounding_box,
         "sphere_center": center,
         "sphere_radius": radius,
-        "centered": True,  # flag for if a scene is centered at origin
-        "scaled": False,  # flag for if a scene is scaled
         "frames": []
     }
-
-    flip_mat = np.array([
-        [1, 0, 0, 0],
-        [0, -1, 0, 0],
-        [0, 0, -1, 0],
-        [0, 0, 0, 1]
-    ])
 
     # read poses
     for img in sorted(images.values()):
@@ -145,8 +142,7 @@ def export_to_json(cameras, images, bounding_box, center, radius, file_path):
         w2c = np.concatenate([rotation, translation], 1)
         w2c = np.concatenate([w2c, np.array([0, 0, 0, 1])[None]], 0)
         c2w = np.linalg.inv(w2c)
-        c2w[:3, -1] -= center  # center scene at origin, we do NOT scale the scene for compatibility with iNGP
-        c2w = c2w @ flip_mat  # convert to GL convention used in iNGP
+        c2w = _cv_to_gl(c2w)  # convert to GL convention used in iNGP
 
         frame = {"file_path": "images/" + img.name, "transform_matrix": c2w.tolist()}
         out["frames"].append(frame)
