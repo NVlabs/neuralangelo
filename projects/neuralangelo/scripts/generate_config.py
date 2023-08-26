@@ -33,6 +33,8 @@ def generate_config(args):
         cfg.data.num_images = num_images
         cfg.model.appear_embed.enabled = True
         cfg.model.appear_embed.dim = 8
+        if num_images < 4:  # default is 4
+            cfg.data.val.subset = num_images
     else:
         cfg.model.appear_embed.enabled = False
     if args.scene_type == "outdoor":

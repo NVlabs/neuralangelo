@@ -8,6 +8,9 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # -----------------------------------------------------------------------------
 
+# NOTE: this template is an example for designing your custom config file. It is not intended to be used directly.
+# Please preprocess your custom data and auto-generate the config file before customizing.
+
 _parent_: projects/neuralangelo/configs/base.yaml
 
 model:
