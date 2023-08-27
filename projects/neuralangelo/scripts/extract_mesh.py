@@ -96,7 +96,7 @@ def main():
             print(f"colors: {len(mesh.visual.vertex_colors)}")
         # center and scale
         mesh.vertices = mesh.vertices * meta["sphere_radius"] + np.array(meta["sphere_center"])
-        mesh.remove_degenerate_faces()
+        mesh.update_faces(mesh.nondegenerate_faces())
         mesh.export(args.output_file)
 
 

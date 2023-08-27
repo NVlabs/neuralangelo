@@ -13,7 +13,7 @@
 colmap feature_extractor \
     --database_path=${1}/database.db \
     --image_path=${1}/images_raw \
-    --ImageReader.camera_model=RADIAL \
+    --ImageReader.camera_model=SIMPLE_RADIAL \
     --ImageReader.single_camera=true \
     --SiftExtraction.use_gpu=true \
     --SiftExtraction.num_threads=32
