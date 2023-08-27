@@ -176,9 +176,13 @@ def init_colmap(args):
 
     for scene in scene_list:
         scene_path = os.path.join(args.tnt_path, scene)
+
+        if not os.path.exists(f"{scene_path}/images_raw"):
+            raise Exception(f"'images_raw` folder cannot be found in {scene_path}. Please check the expected folder structure in DATA_PREPROCESSING.md")
+        
         # extract features
         os.system(f"colmap feature_extractor --database_path {scene_path}/database.db \
-                --image_path {scene_path}/images \
+                --image_path {scene_path}/images_raw \
                 --ImageReader.camera_model=RADIAL \
                 --SiftExtraction.use_gpu=true \
                 --SiftExtraction.num_threads=32 \
@@ -193,7 +197,7 @@ def init_colmap(args):
 
         # read poses
         poses = load_COLMAP_poses(os.path.join(scene_path, f'{scene}_COLMAP_SfM.log'),
-                                  os.path.join(scene_path, 'images'))
+                                  os.path.join(scene_path, 'images_raw'))
 
         # convert to colmap files
         pinhole_dict_file = os.path.join(scene_path, 'pinhole_dict.json')
@@ -204,29 +208,27 @@ def init_colmap(args):
         create_init_files(pinhole_dict_file, db_file, sfm_dir)
 
         # bundle adjustment
-        os.makedirs(f'{scene_path}/sparse/0', exist_ok=True)
         os.system(f"colmap point_triangulator \
                 --database_path {scene_path}/database.db \
                 --image_path {scene_path}/images \
                 --input_path {scene_path}/sparse \
-                --output_path {scene_path}/sparse/0 \
+                --output_path {scene_path}/sparse \
                 --Mapper.tri_ignore_two_view_tracks=true"
                   )
         os.system(f"colmap bundle_adjuster \
-                --input_path {scene_path}/sparse/0 \
-                --output_path {scene_path}/sparse/0 \
+                --input_path {scene_path}/sparse \
+                --output_path {scene_path}/sparse \
                 --BundleAdjustment.refine_extrinsics=false"
                   )
 
         # undistortion
         os.system(f"colmap image_undistorter \
-            --image_path {scene_path}/images \
-            --input_path {scene_path}/sparse/0 \
-            --output_path {scene_path}/dense \
+            --image_path {scene_path}/images_raw \
+            --input_path {scene_path}/sparse \
+            --output_path {scene_path} \
             --output_type COLMAP \
             --max_image_size 1500"
                   )
-        shutil.rmtree(f'{scene_path}/sparse')
 
         # read for bounding information
         trans = load_transformation(os.path.join(scene_path, f'{scene}_trans.txt'))
@@ -236,7 +238,7 @@ def init_colmap(args):
         center, radius, bounding_box = compute_bound(pts_aligned[::100])
 
         # colmap to json
-        cameras, images, points3D = read_model(os.path.join(args.tnt_path, scene, 'dense/sparse'), ext='.bin')
+        cameras, images, points3D = read_model(os.path.join(args.tnt_path, scene, 'sparse'), ext='.bin')
         export_to_json(cameras, images, bounding_box, list(center), radius, os.path.join(scene_path, 'transforms.json'))
         print('Writing data to json file: ', os.path.join(scene_path, 'transforms.json'))
 
