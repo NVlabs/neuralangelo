@@ -113,7 +113,7 @@ bash projects/neuralangelo/scripts/preprocess_dtu.sh ${PATH_TO_DTU}
 ## Tanks and Temples dataset
 Download the data from [Tanks and Temples](https://tanksandtemples.org/download/) website.
 You will also need to download additional [COLMAP/camera/alignment](https://drive.google.com/file/d/1jAr3IDvhVmmYeDWi0D_JfgiHcl70rzVE/view?resourcekey=) and the images of each scene.  
-The file structure should look like (you may need to move around the downloaded images):
+The file structure should look like (you need to move the downloaded images to folder `images_raw`):
 ```
 tanks_and_temples
 ├─ Barn
@@ -121,7 +121,7 @@ tanks_and_temples
 │  ├─ Barn.json             (cropfiles)
 │  ├─ Barn.ply              (ground-truth point cloud)
 │  ├─ Barn_trans.txt        (colmap-to-ground-truth transformation)
-│  └─ images                (folder of images)
+│  └─ images_raw            (raw input images downloaded from Tanks and Temples website)
 │     ├─ 000001.png
 │     ├─ 000002.png
 │     ...
