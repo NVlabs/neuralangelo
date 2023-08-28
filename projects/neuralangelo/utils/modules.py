@@ -106,7 +106,7 @@ class NeuralSDF(torch.nn.Module):
             epsilon_res = self.resolutions[self.active_levels - 1]
             self.normal_eps = 1. / epsilon_res
         else:
-            self.normal_eps = self.resolutions[-1]
+            self.normal_eps = 1. / self.resolutions[-1]
 
     @torch.no_grad()
     def _get_coarse2fine_mask(self, points_enc, feat_dim):
