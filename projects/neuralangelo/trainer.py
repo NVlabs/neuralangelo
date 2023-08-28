@@ -53,10 +53,8 @@ class Trainer(BaseTrainer):
 
     def get_curvature_weight(self, current_iteration, init_weight, decay_factor):
         if "curvature" in self.weights:
-            if current_iteration <= self.warm_up_end:
-                self.weights["curvature"] = current_iteration / self.warm_up_end * init_weight
-            else:
-                self.weights["curvature"] = init_weight / decay_factor
+            weight = (min(current_iteration / self.warm_up_end, 1.) if self.warm_up_end > 0 else 1.) * init_weight
+            self.weights["curvature"] = weight / decay_factor
 
     def _start_of_iteration(self, data, current_iteration):
         model = self.model_module
