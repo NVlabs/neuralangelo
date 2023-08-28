@@ -628,9 +628,9 @@ class Checkpointer(object):
             # Load the state dicts.
             print('- Loading the model...')
             self.model.load_state_dict(state_dict['model'], strict=self.strict_resume)
-            self.resume_epoch = state_dict['epoch']
-            self.resume_iteration = state_dict['iteration']
             if resume:
+                self.resume_epoch = state_dict['epoch']
+                self.resume_iteration = state_dict['iteration']
                 self.sched.last_epoch = self.resume_iteration if self.iteration_mode else self.resume_epoch
                 if load_opt:
                     print('- Loading the optimizer...')
@@ -641,6 +641,8 @@ class Checkpointer(object):
                 print(f"Done with loading the checkpoint (epoch {self.resume_epoch}, iter {self.resume_iteration}).")
             else:
                 print('Done with loading the checkpoint.')
+            self.eval_epoch = state_dict['epoch']
+            self.eval_iteration = state_dict['iteration']
         else:
             # Checkpoint not found and not specified. We will train everything from scratch.
             print('Training from scratch.')

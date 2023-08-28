@@ -122,7 +122,7 @@ optim:
     sched:
         iteration_mode: True
         type: two_steps_with_warmup
-        warm_up_end: 5000
+        warm_up_end: 0
         two_steps: [300000,400000]
         gamma: 10.0
 

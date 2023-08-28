@@ -23,6 +23,11 @@ model:
     appear_embed:
         enabled: False
 
+optim:
+    sched:
+        type: two_steps_with_warmup
+        warm_up_end: 5000
+
 data:
     type: projects.neuralangelo.data
     root: datasets/dtu/dtu_scan24

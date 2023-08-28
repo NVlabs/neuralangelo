@@ -65,7 +65,7 @@ def main():
     trainer.model.eval()
 
     # Set the coarse-to-fine levels.
-    trainer.current_iteration = trainer.checkpointer.resume_iteration
+    trainer.current_iteration = trainer.checkpointer.eval_iteration
     if cfg.model.object.sdf.encoding.coarse2fine.enabled:
         trainer.model_module.neural_sdf.set_active_levels(trainer.current_iteration)
         if cfg.model.object.sdf.gradient.mode == "numerical":

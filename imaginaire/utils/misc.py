@@ -92,7 +92,7 @@ def to_device(data, device):
     assert isinstance(device, torch.device)
 
     if isinstance(data, torch.Tensor):
-        data = data.to(device, non_blocking=True)
+        data = data.to(device)
         return data
     elif isinstance(data, collections.abc.Mapping):
         return type(data)({key: to_device(data[key], device) for key in data})
