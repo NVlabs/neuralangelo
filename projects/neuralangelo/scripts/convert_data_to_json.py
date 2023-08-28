@@ -63,7 +63,7 @@ def bound_by_pose(images):
             tgt_frame = g[0:3, :]
             p = find_closest_point(src_frame[:, 3], src_frame[:, 2], tgt_frame[:, 3], tgt_frame[:, 2])
             center += p
-    center /= len(poses)**2
+    center /= len(poses) ** 2
 
     radius = 0.0
     for f in poses:
@@ -81,13 +81,47 @@ def bound_by_points(points3D):
     xyzs = np.stack([point.xyz for point in points3D.values()])
     center = xyzs.mean(axis=0)
     std = xyzs.std(axis=0)
-    radius = float(std.max() * 3)  # use 3*std to define the region, equivalent to 99% percentile
+    radius = float(std.max() * 2)  # use 2*std to define the region, equivalent to 95% percentile
     bounding_box = [
         [center[0] - std[0] * 3, center[0] + std[0] * 3],
         [center[1] - std[1] * 3, center[1] + std[1] * 3],
         [center[2] - std[2] * 3, center[2] + std[2] * 3],
     ]
     return center, radius, bounding_box
+
+
+def check_concentric(images, ang_tol=np.pi / 6.0, radii_tol=0.5, pose_tol=0.5):
+    look_at = []
+    cam_loc = []
+    for img in images.values():
+        rotation = qvec2rotmat(img.qvec)
+        translation = img.tvec.reshape(3, 1)
+        w2c = np.concatenate([rotation, translation], 1)
+        w2c = np.concatenate([w2c, np.array([0, 0, 0, 1])[None]], 0)
+        c2w = np.linalg.inv(w2c)
+        cam_loc.append(c2w[:3, -1])
+        look_at.append(c2w[:3, 2])
+    look_at = np.stack(look_at)
+    look_at = look_at / np.linalg.norm(look_at, axis=1, keepdims=True)
+    cam_loc = np.stack(cam_loc)
+    num_images = cam_loc.shape[0]
+
+    center = cam_loc.mean(axis=0)
+    vec = center - cam_loc
+    radii = np.linalg.norm(vec, axis=1, keepdims=True)
+    vec_unit = vec / radii
+    ang = np.arccos((look_at * vec_unit).sum(axis=-1, keepdims=True))
+    ang_valid = ang < ang_tol
+    print(f"Fraction of images looking at the center: {ang_valid.sum()/num_images:.2f}.")
+
+    radius_mean = radii.mean()
+    radii_valid = np.isclose(radius_mean, radii, rtol=radii_tol)
+    print(f"Fraction of images positioned around the center: {radii_valid.sum()/num_images:.2f}.")
+
+    valid = ang_valid * radii_valid
+    print(f"Valid fraction of concentric images: {valid.sum()/num_images:.2f}.")
+
+    return valid.sum() / num_images > pose_tol
 
 
 def _cv_to_gl(cv):
@@ -132,7 +166,7 @@ def export_to_json(cameras, images, bounding_box, center, radius, file_path):
         "aabb_range": bounding_box,
         "sphere_center": center,
         "sphere_radius": radius,
-        "frames": []
+        "frames": [],
     }
 
     # read poses
@@ -153,23 +187,15 @@ def export_to_json(cameras, images, bounding_box, center, radius, file_path):
     return
 
 
-def auto_bound(args):
+def data_to_json(args):
     cameras, images, points3D = read_model(os.path.join(args.data_dir, "sparse"), ext=".bin")
 
     # define bounding regions based on scene type
     if args.scene_type == "outdoor":
-        center_points, radius_points, bounding_box_points = bound_by_points(points3D)
-        center_pose, radius_pose, bounding_box_pose = bound_by_pose(images)
-        # check the differences
-        diff = np.linalg.norm(center_points - center_pose)
-        squared_radii = radius_points + radius_pose
-        diff = np.inf
-        if diff / squared_radii < 0.05:
-            # scene center is close to pose center with 95% overlap, use pose
-            center, radius, bounding_box = center_pose, radius_pose, bounding_box_pose
+        if check_concentric(images):
+            center, radius, bounding_box = bound_by_pose(images)
         else:
-            # different results, use sfm points
-            center, radius, bounding_box = center_points, radius_points, bounding_box_points
+            center, radius, bounding_box = bound_by_points(points3D)
     elif args.scene_type == "indoor":
         # use sfm points as a proxy to define bounding regions
         center, radius, bounding_box = bound_by_points(points3D)
@@ -188,8 +214,13 @@ def auto_bound(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--data_dir", type=str, default=None, help="Path to data")
-    parser.add_argument("--scene_type", type=str, default="outdoor", choices=["outdoor", "indoor", "object"],
-                        help="Select scene type. Outdoor for building-scale reconstruction; "
-                        "indoor for room-scale reconstruction; object for object-centric scene reconstruction.")
+    parser.add_argument(
+        "--scene_type",
+        type=str,
+        default="outdoor",
+        choices=["outdoor", "indoor", "object"],
+        help="Select scene type. Outdoor for building-scale reconstruction; "
+        "indoor for room-scale reconstruction; object for object-centric scene reconstruction.",
+    )
     args = parser.parse_args()
-    auto_bound(args)
+    data_to_json(args)

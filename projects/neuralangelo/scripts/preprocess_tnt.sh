@@ -14,7 +14,7 @@ echo "Download fixed poses for Courthouse"
 gdown 10pcCwaQY6hqyiegJGdgmLp_HMFOnsmgq
 gdown 19TT5aTz3z60eUVIDhFJ7EgGqpcqQnJEi
 mv Courthouse_COLMAP_SfM.log ${1}/Courthouse/Courthouse_COLMAP_SfM.log
-mv Courthouse_trans.log ${1}/Courthouse/Courthouse_trans.log
+mv Courthouse_trans.txt ${1}/Courthouse/Courthouse_trans.txt
 
 echo "Compute intrinsics, undistort images and generate json files. This may take a while"
 python3 projects/neuralangelo/scripts/convert_tnt_to_json.py --tnt_path ${1}

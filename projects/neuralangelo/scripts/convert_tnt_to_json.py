@@ -16,7 +16,6 @@ import json
 import sys
 from pathlib import Path
 from argparse import ArgumentParser
-import shutil
 import trimesh
 
 dir_path = Path(os.path.dirname(os.path.realpath(__file__))).parents[2]
@@ -178,8 +177,9 @@ def init_colmap(args):
         scene_path = os.path.join(args.tnt_path, scene)
 
         if not os.path.exists(f"{scene_path}/images_raw"):
-            raise Exception(f"'images_raw` folder cannot be found in {scene_path}. Please check the expected folder structure in DATA_PREPROCESSING.md")
-        
+            raise Exception(f"'images_raw` folder cannot be found in {scene_path}."
+                            "Please check the expected folder structure in DATA_PREPROCESSING.md")
+
         # extract features
         os.system(f"colmap feature_extractor --database_path {scene_path}/database.db \
                 --image_path {scene_path}/images_raw \
@@ -210,7 +210,7 @@ def init_colmap(args):
         # bundle adjustment
         os.system(f"colmap point_triangulator \
                 --database_path {scene_path}/database.db \
-                --image_path {scene_path}/images \
+                --image_path {scene_path}/images_raw \
                 --input_path {scene_path}/sparse \
                 --output_path {scene_path}/sparse \
                 --Mapper.tri_ignore_two_view_tracks=true"
