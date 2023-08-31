@@ -16,7 +16,6 @@ import os
 import sys
 import numpy as np
 from functools import partial
-from pathlib import Path
 
 sys.path.append(os.getcwd())
 from imaginaire.config import Config, recursive_update_strict, parse_cmdline_arguments  # noqa: E402
@@ -98,9 +97,7 @@ def main():
         # center and scale
         mesh.vertices = mesh.vertices * meta["sphere_radius"] + np.array(meta["sphere_center"])
         mesh.update_faces(mesh.nondegenerate_faces())
-        folderpath = Path(args.output_file).parent
-        if not folderpath.exists():
-            folderpath.mkdir(parents=True)
+        os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
         mesh.export(args.output_file)
 
 
