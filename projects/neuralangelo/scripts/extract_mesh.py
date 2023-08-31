@@ -97,6 +97,7 @@ def main():
         # center and scale
         mesh.vertices = mesh.vertices * meta["sphere_radius"] + np.array(meta["sphere_center"])
         mesh.update_faces(mesh.nondegenerate_faces())
+        os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
         mesh.export(args.output_file)
 
 
