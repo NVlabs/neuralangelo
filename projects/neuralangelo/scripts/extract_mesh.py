@@ -35,6 +35,8 @@ def parse_args():
     parser.add_argument("--block_res", default=64, type=int, help="Block-wise resolution for marching cubes")
     parser.add_argument("--output_file", default="mesh.ply", type=str, help="Output file name")
     parser.add_argument("--textured", action="store_true", help="Export mesh with texture")
+    parser.add_argument("--keep_lcc", action="store_true",
+                        help="Keep only largest connected component. May remove thin structures.")
     args, cfg_cmd = parser.parse_known_args()
     return args, cfg_cmd
 
@@ -84,10 +86,8 @@ def main():
     texture_func = partial(extract_texture, neural_sdf=trainer.model_module.neural_sdf,
                            neural_rgb=trainer.model_module.neural_rgb,
                            appear_embed=trainer.model_module.appear_embed) if args.textured else None
-
-    mesh = extract_mesh(sdf_func=sdf_func, bounds=bounds,
-                        intv=(2.0 / args.resolution), block_res=args.block_res,
-                        texture_func=texture_func)
+    mesh = extract_mesh(sdf_func=sdf_func, bounds=bounds, intv=(2.0 / args.resolution),
+                        block_res=args.block_res, texture_func=texture_func, filter_lcc=args.keep_lcc)
 
     if is_master():
         print(f"vertices: {len(mesh.vertices)}")

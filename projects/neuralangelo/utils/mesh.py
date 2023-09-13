@@ -22,7 +22,7 @@ from imaginaire.utils.distributed import get_world_size, is_master
 
 
 @torch.no_grad()
-def extract_mesh(sdf_func, bounds, intv, block_res=64, texture_func=None):
+def extract_mesh(sdf_func, bounds, intv, block_res=64, texture_func=None, filter_lcc=False):
     lattice_grid = LatticeGrid(bounds, intv=intv, block_res=block_res)
     data_loader = get_lattice_grid_loader(lattice_grid)
     mesh_blocks = []
@@ -33,7 +33,7 @@ def extract_mesh(sdf_func, bounds, intv, block_res=64, texture_func=None):
         xyz_cuda = xyz.cuda()
         sdf_cuda = sdf_func(xyz_cuda)[..., 0]
         sdf = sdf_cuda.cpu()
-        mesh = marching_cubes(sdf.numpy(), xyz.numpy(), intv, texture_func)
+        mesh = marching_cubes(sdf.numpy(), xyz.numpy(), intv, texture_func, filter_lcc)
         mesh_blocks.append(mesh)
     mesh_blocks_gather = [None] * get_world_size()
     if dist.is_initialized():
@@ -116,7 +116,7 @@ def get_lattice_grid_loader(dataset, num_workers=8):
     )
 
 
-def marching_cubes(sdf, xyz, intv, texture_func):
+def marching_cubes(sdf, xyz, intv, texture_func, filter_lcc):
     # marching cubes
     V, F = mcubes.marching_cubes(sdf, 0.)
     if V.shape[0] > 0:
@@ -127,6 +127,7 @@ def marching_cubes(sdf, xyz, intv, texture_func):
         else:
             mesh = trimesh.Trimesh(V, F)
         mesh = filter_points_outside_bounding_sphere(mesh)
+        mesh = filter_largest_cc(mesh) if filter_lcc else mesh
     else:
         mesh = trimesh.Trimesh()
     return mesh
@@ -142,6 +143,16 @@ def filter_points_outside_bounding_sphere(old_mesh):
         new_vertices = old_mesh.vertices[mask]
         new_colors = old_mesh.visual.vertex_colors[mask]
         new_mesh = trimesh.Trimesh(new_vertices, new_faces, vertex_colors=new_colors)
+    else:
+        new_mesh = trimesh.Trimesh()
+    return new_mesh
+
+
+def filter_largest_cc(mesh):
+    components = mesh.split(only_watertight=False)
+    areas = np.array([c.area for c in components], dtype=float)
+    if len(areas) > 0 and mesh.vertices.shape[0] > 0:
+        new_mesh = components[areas.argmax()]
     else:
         new_mesh = trimesh.Trimesh()
     return new_mesh
