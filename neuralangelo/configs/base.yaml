@@ -21,7 +21,7 @@ checkpoint:
     save_iter: 20000
 
 trainer:
-    type: projects.neuralangelo.trainer
+    type: neuralangelo.trainer
     ema_config:
         enabled: False
         load_ema_checkpoint: False
@@ -36,7 +36,7 @@ trainer:
     depth_vis_scale: 0.5
 
 model:
-    type: projects.neuralangelo.model
+    type: neuralangelo.model
     object:
         sdf:
             mlp:
@@ -127,7 +127,7 @@ optim:
         gamma: 10.0
 
 data:
-    type: projects.nerf.datasets.nerf_blender
+    type: nerf.datasets.nerf_blender
     root: datasets/nerf-synthetic/lego
     use_multi_epoch_loader: True
     num_workers: 4

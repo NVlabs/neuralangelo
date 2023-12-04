@@ -8,7 +8,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # -----------------------------------------------------------------------------
 
-_parent_: projects/neuralangelo/configs/base.yaml
+_parent_: neuralangelo/configs/base.yaml
 
 model:
     object:
@@ -23,7 +23,7 @@ model:
         dim: 8
 
 data:
-    type: projects.neuralangelo.data
+    type: neuralangelo.data
     root: datasets/tanks_and_temples/Barn
     num_images: 410  # The number of training images.
     train:

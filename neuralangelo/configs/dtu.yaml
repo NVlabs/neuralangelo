@@ -8,7 +8,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # -----------------------------------------------------------------------------
 
-_parent_: projects/neuralangelo/configs/base.yaml
+_parent_: neuralangelo/configs/base.yaml
 
 model:
     object:
@@ -24,7 +24,7 @@ model:
         enabled: False
 
 data:
-    type: projects.neuralangelo.data
+    type: neuralangelo.data
     root: datasets/dtu/dtu_scan24
     train:
         image_size: [1200,1600]

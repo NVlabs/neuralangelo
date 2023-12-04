@@ -2,10 +2,10 @@ import torch
 import torch.nn.functional as torch_F
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from projects.neuralangelo.model import Model
-from projects.neuralangelo.datasets.dataloader import get_dataloaer
-import projects.neuralangelo.utils.misc as misc
-import projects.neuralangelo.utils.torch_utils as th_utils
+from neuralangelo.model import Model
+from neuralangelo.datasets.dataloader import get_dataloaer
+import neuralangelo.utils.misc as misc
+import neuralangelo.utils.torch_utils as th_utils
 
 
 class Trainer(object):

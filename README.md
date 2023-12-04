@@ -47,7 +47,7 @@ The code uses the same json format as [Instant NGP](https://github.com/NVlabs/in
 EXPERIMENT=toy_example
 GROUP=example_group
 NAME=example_name
-CONFIG=projects/neuralangelo/configs/custom/${EXPERIMENT}.yaml
+CONFIG=neuralangelo/configs/custom/${EXPERIMENT}.yaml
 GPUS=1  # use >1 for multi-GPU training!
 torchrun --nproc_per_node=${GPUS} train.py \
     --logdir=logs/${GROUP}/${NAME} \
@@ -74,7 +74,7 @@ CONFIG=logs/${GROUP}/${NAME}/config.yaml
 RESOLUTION=2048
 BLOCK_RES=128
 GPUS=1  # use >1 for multi-GPU mesh extraction
-torchrun --nproc_per_node=${GPUS} projects/neuralangelo/scripts/extract_mesh.py \
+torchrun --nproc_per_node=${GPUS} neuralangelo/scripts/extract_mesh.py \
     --config=${CONFIG} \
     --checkpoint=${CHECKPOINT} \
     --output_file=${OUTPUT_MESH} \
@@ -105,7 +105,7 @@ Some useful notes:
 
 2. **Q:** The reconstruction of my custom dataset is bad. What can I do?  
     **A:** It is worth looking into the following:
-    - The camera poses recovered by COLMAP may be off. We have implemented tools (using [Blender](https://github.com/mli0603/BlenderNeuralangelo) or [Jupyter notebook](projects/neuralangelo/scripts/visualize_colmap.ipynb)) to inspect the COLMAP results.
+    - The camera poses recovered by COLMAP may be off. We have implemented tools (using [Blender](https://github.com/mli0603/BlenderNeuralangelo) or [Jupyter notebook](neuralangelo/scripts/visualize_colmap.ipynb)) to inspect the COLMAP results.
     - The computed bounding regions may be off and/or too small/large. Please refer to [data preprocessing](DATA_PROCESSING.md) on how to adjust the bounding regions manually.
     - The video capture sequence may contain significant motion blur or out-of-focus frames. Higher shutter speed (reducing motion blur) and smaller aperture (increasing focus range) are very helpful.
 

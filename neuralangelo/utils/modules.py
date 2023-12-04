@@ -15,10 +15,10 @@ from functools import partial
 import numpy as np
 import tinycudann as tcnn
 
-from projects.neuralangelo.utils.spherical_harmonics import get_spherical_harmonics
-from projects.neuralangelo.utils.mlp import MLPforNeuralSDF
-from projects.neuralangelo.utils.misc import get_activation
-from projects.neuralangelo.utils import nerf_util
+from neuralangelo.utils.spherical_harmonics import get_spherical_harmonics
+from neuralangelo.utils.mlp import MLPforNeuralSDF
+from neuralangelo.utils.misc import get_activation
+from neuralangelo.utils import nerf_util
 
 
 class NeuralSDF(torch.nn.Module):

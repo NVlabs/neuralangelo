@@ -1,10 +1,10 @@
 import os
 import argparse
 import time
-from projects.neuralangelo.utils.config import Config
-from projects.neuralangelo.utils.torch_utils import init_cudnn
-from projects.neuralangelo.trainer import Trainer
-import projects.neuralangelo.utils.torch_utils as th_utils
+from neuralangelo.utils.config import Config
+from neuralangelo.utils.torch_utils import init_cudnn
+from neuralangelo.trainer import Trainer
+import neuralangelo.utils.torch_utils as th_utils
 
 
 def parse_args():
