@@ -7,18 +7,13 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # -----------------------------------------------------------------------------
-
-logging_iter: 9999999999999  # disable the printing logger
-
 max_iter: 200
-
-wandb_scalar_iter: 100
-wandb_image_iter: 10000
 validation_iter: 5000
 speed_benchmark: False
 
-checkpoint:
+ckpt:
     save_iter: 20000
+    output: /mnt/nas/share-all/caizebin/07.cache/nerf/nerfsudio/output
 
 trainer:
     type: projects.neuralangelo.trainer
@@ -41,7 +36,7 @@ model:
         sdf:
             mlp:
                 num_layers: 1
-                hidden_dim: 256
+                hidden_dim: 128
                 skip: []
                 activ: softplus
                 activ_params:
@@ -68,8 +63,8 @@ model:
                 taps: 4
         rgb:
             mlp:
-                num_layers: 4
-                hidden_dim: 256
+                num_layers: 3
+                hidden_dim: 128
                 skip: []
                 activ: relu_
                 activ_params: {}
@@ -79,17 +74,17 @@ model:
                 type: spherical
                 levels: 3
         s_var:
-            init_val: 3.
+            init_val: 1.4
             anneal_end: 0.1
     background:
         enabled: True
         white: False
         mlp:
-            num_layers: 8
-            hidden_dim: 256
+            num_layers: 3
+            hidden_dim: 128
             skip: [4]
             num_layers_rgb: 2
-            hidden_dim_rgb: 128
+            hidden_dim_rgb: 64
             skip_rgb: []
             activ: relu
             activ_params: {}
@@ -120,28 +115,34 @@ optim:
         lr: 1e-3
         weight_decay: 1e-2
     sched:
-        type: two_steps_with_warmup
         iteration_mode: True
+        type: two_steps_with_warmup
         warm_up_end: 5000
         two_steps: [300000,400000]
         gamma: 10.0
 
 data:
-    type: projects.nerf.datasets.nerf_blender
-    root: datasets/nerf-synthetic/lego
+    type: projects.neuralangelo.data
+    root: datasets/dtu/dtu_scan24
     use_multi_epoch_loader: True
     num_workers: 4
     preload: True
     num_images:  # The number of training images.
     train:
-        image_size: [800,800]
-        batch_size: 2
+        image_size: [1200,1600]
+        batch_size: 1
         subset:
     val:
-        image_size: [400,400]
-        batch_size: 2
-        subset: 4
+        image_size: [300,400]
+        batch_size: 1
+        subset: 1
         max_viz_samples: 16
     readjust:
         center: [0.,0.,0.]
         scale: 1.
+
+cudnn:
+    deterministic: False
+    benchmark: True
+
+max_epoch: 9999999999

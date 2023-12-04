@@ -1,110 +1,211 @@
-'''
------------------------------------------------------------------------------
-Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
-
-NVIDIA CORPORATION and its licensors retain all intellectual property
-and proprietary rights in and to this software, related documentation
-and any modifications thereto. Any use, reproduction, disclosure or
-distribution of this software and related documentation without an express
-license agreement from NVIDIA CORPORATION is strictly prohibited.
------------------------------------------------------------------------------
-'''
-
 import torch
 import torch.nn.functional as torch_F
-import wandb
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+from projects.neuralangelo.model import Model
+from projects.neuralangelo.datasets.dataloader import get_dataloaer
+import projects.neuralangelo.utils.misc as misc
+import projects.neuralangelo.utils.torch_utils as th_utils
 
-from imaginaire.utils.distributed import master_only
-from imaginaire.utils.visualization import wandb_image
-from projects.nerf.trainers.base import BaseTrainer
-from projects.neuralangelo.utils.misc import get_scheduler, eikonal_loss, curvature_loss
 
-
-class Trainer(BaseTrainer):
-
-    def __init__(self, cfg, is_inference=True, seed=0):
-        super().__init__(cfg, is_inference=is_inference, seed=seed)
-        self.metrics = dict()
+class Trainer(object):
+    def __init__(self, cfg, phase="train"):
+        self.cfg = cfg
+        self.phase = phase
+        self.device = torch.device("cuda:0")
+        self.model = self.setup_model(cfg)
         self.warm_up_end = cfg.optim.sched.warm_up_end
         self.cfg_gradient = cfg.model.object.sdf.gradient
-        if cfg.model.object.sdf.encoding.type == "hashgrid" and cfg.model.object.sdf.encoding.coarse2fine.enabled:
+        if (
+            cfg.model.object.sdf.encoding.type == "hashgrid"
+            and cfg.model.object.sdf.encoding.coarse2fine.enabled
+        ):
             self.c2f_step = cfg.model.object.sdf.encoding.coarse2fine.step
-            self.model.module.neural_sdf.warm_up_end = self.warm_up_end
+            self.model.neural_sdf.warm_up_end = self.warm_up_end
 
-    def _init_loss(self, cfg):
-        self.criteria["render"] = torch.nn.L1Loss()
+        self.optim = None
+        self.sched = None
+        if phase:
+            self.optim = th_utils.setup_optimizer(cfg, self.model)
+            self.sched = misc.get_scheduler(cfg.optim, self.optim)
+        self.init_losses(cfg)
+        self.cur_iter = 0
+        self.writer = SummaryWriter(cfg.ckpt.output)
 
-    def setup_scheduler(self, cfg, optim):
-        return get_scheduler(cfg.optim, optim)
+    def setup_model(self, cfg):
+        model = Model(cfg.model, cfg.data)
+        model = model.to(self.device)
+        print(f"model parameter: {misc.calculate_model_size(model)}")
+        return model
 
-    def _compute_loss(self, data, mode=None):
-        if mode == "train":
+    def init_losses(self, cfg):
+        self.render_loss = torch.nn.L1Loss().to(self.device)
+        self.loss_weight = {
+            key: value for key, value in cfg.trainer.loss_weight.items() if value
+        }
+
+    def compute_loss(self, data, phase="train"):
+        losses = {}
+        metrics = {}
+        if phase == "train":
+            loss_weight = self.cfg.trainer.loss_weight
             # Compute loss only on randomly sampled rays.
-            self.losses["render"] = self.criteria["render"](data["rgb"], data["image_sampled"]) * 3  # FIXME:sumRGB?!
-            self.metrics["psnr"] = -10 * torch_F.mse_loss(data["rgb"], data["image_sampled"]).log10()
-            if "eikonal" in self.weights.keys():
-                self.losses["eikonal"] = eikonal_loss(data["gradients"], outside=data["outside"])
-            if "curvature" in self.weights:
-                self.losses["curvature"] = curvature_loss(data["hessians"], outside=data["outside"])
+            # FIXME:sumRGB?!
+            losses["render"] = (
+                self.render_loss(data["rgb"], data["image_sampled"])
+                * 3
+                * loss_weight.render
+            )
+            losses["eikonal"] = (
+                misc.eikonal_loss(data["gradients"], outside=data["outside"])
+                * loss_weight.eikonal
+            )
+            if "curvature" in loss_weight:
+                losses["curvature"] = (
+                    misc.curvature_loss(data["hessians"], outside=data["outside"])
+                    * self.loss_weight["curvature"]
+                )
+            total = 0
+            for key, value in losses.items():
+                total += value
+            losses["total"] = total
+            metrics["psnr"] = (
+                -10 * torch_F.mse_loss(data["rgb"], data["image_sampled"]).log10()
+            )
+
         else:
             # Compute loss on the entire image.
-            self.losses["render"] = self.criteria["render"](data["rgb_map"], data["image"])
-            self.metrics["psnr"] = -10 * torch_F.mse_loss(data["rgb_map"], data["image"]).log10()
+            losses["render"] = self.render_loss(data["rgb_map"], data["image"])
+            metrics["psnr"] = (
+                -10 * torch_F.mse_loss(data["rgb_map"], data["image"]).log10()
+            )
+        return losses, metrics
 
-    def get_curvature_weight(self, current_iteration, init_weight):
-        if "curvature" in self.weights:
-            if current_iteration <= self.warm_up_end:
-                self.weights["curvature"] = current_iteration / self.warm_up_end * init_weight
+    def update_loss_weight(self):
+        if "curvature" in self.loss_weight:
+            init_weight = self.cfg.trainer.loss_weight.curvature
+            if self.cur_iter <= self.warm_up_end:
+                self.loss_weight["curvature"] = (
+                    self.cur_iter / self.warm_up_end * init_weight
+                )
             else:
-                model = self.model_module
-                decay_factor = model.neural_sdf.growth_rate ** (model.neural_sdf.anneal_levels - 1)
-                self.weights["curvature"] = init_weight / decay_factor
+                decay_factor = self.model.neural_sdf.growth_rate ** (
+                    self.model.neural_sdf.anneal_levels - 1
+                )
+                self.loss_weight["curvature"] = init_weight / decay_factor
 
-    def _start_of_iteration(self, data, current_iteration):
-        model = self.model_module
-        self.progress = model.progress = current_iteration / self.cfg.max_iter
+    def start_of_iteration(self):
         if self.cfg.model.object.sdf.encoding.coarse2fine.enabled:
-            model.neural_sdf.set_active_levels(current_iteration)
+            self.model.neural_sdf.set_active_levels(self.cur_iter)
             if self.cfg_gradient.mode == "numerical":
-                model.neural_sdf.set_normal_epsilon()
-                self.get_curvature_weight(current_iteration, self.cfg.trainer.loss_weight.curvature)
+                self.model.neural_sdf.set_normal_epsilon()
+                self.update_loss_weight()
         elif self.cfg_gradient.mode == "numerical":
-            model.neural_sdf.set_normal_epsilon()
+            self.model.neural_sdf.set_normal_epsilon()
 
-        return super()._start_of_iteration(data, current_iteration)
-
-    @master_only
-    def log_wandb_scalars(self, data, mode=None):
-        super().log_wandb_scalars(data, mode=mode)
+    def log_scalars(self, data, losses, metrics, phase):
         scalars = {
-            f"{mode}/PSNR": self.metrics["psnr"].detach(),
-            f"{mode}/s-var": self.model_module.s_var.item(),
+            "psnr": metrics["psnr"].detach(),
+            "s-var": self.model.s_var.item(),
+            "render_loss": losses["render"].item(),
         }
-        if "curvature" in self.weights:
-            scalars[f"{mode}/curvature_weight"] = self.weights["curvature"]
-        if "eikonal" in self.weights:
-            scalars[f"{mode}/eikonal_weight"] = self.weights["eikonal"]
-        if mode == "train" and self.cfg_gradient.mode == "numerical":
-            scalars[f"{mode}/epsilon"] = self.model.module.neural_sdf.normal_eps
+        if "curvature" in self.cfg.trainer.loss_weight and phase == "train":
+            scalars["curvature_weight"] = self.loss_weight["curvature"]
+            scalars["curvature_loss"] = losses["curvature"]
+        if phase == "train" and self.cfg_gradient.mode == "numerical":
+            scalars["epsilon"] = self.model.neural_sdf.normal_eps
+        if phase == "train":
+            scalars["eikonal_weight"] = self.loss_weight["eikonal"]
+            scalars["eikonal_loss"] = losses["eikonal"].item()
+            scalars["total_loss"] = losses["total"].item()
         if self.cfg.model.object.sdf.encoding.coarse2fine.enabled:
-            scalars[f"{mode}/active_levels"] = self.model.module.neural_sdf.active_levels
-        wandb.log(scalars, step=self.current_iteration)
+            scalars["active_levels"] = self.model.neural_sdf.active_levels
 
-    @master_only
-    def log_wandb_images(self, data, mode=None, max_samples=None):
-        images = {"iteration": self.current_iteration, "epoch": self.current_epoch}
-        if mode == "val":
-            images_error = (data["rgb_map"] - data["image"]).abs()
-            images.update({
-                f"{mode}/vis/rgb_target": wandb_image(data["image"]),
-                f"{mode}/vis/rgb_render": wandb_image(data["rgb_map"]),
-                f"{mode}/vis/rgb_error": wandb_image(images_error),
-                f"{mode}/vis/normal": wandb_image(data["normal_map"], from_range=(-1, 1)),
-                f"{mode}/vis/inv_depth": wandb_image(1 / (data["depth_map"] + 1e-8) * self.cfg.trainer.depth_vis_scale),
-                f"{mode}/vis/opacity": wandb_image(data["opacity_map"]),
-            })
-        wandb.log(images, step=self.current_iteration)
+        for key, value in scalars.items():
+            self.writer.add_scalar(f"{phase}/{key}", value, global_step=self.cur_iter)
 
-    def train(self, cfg, data_loader, single_gpu=False, profile=False, show_pbar=False):
-        self.progress = self.model_module.progress = self.current_iteration / self.cfg.max_iter
-        super().train(cfg, data_loader, single_gpu, profile, show_pbar)
+    def log_images(self, data, phase=None):
+        assert phase == "val"
+        images_error = (data["rgb_map"] - data["image"]).abs()
+        depth_image = 1 / (data["depth_map"] + 1e-8) * self.cfg.trainer.depth_vis_scale
+        images = {
+            "rgb_target": data["image"].squeeze(),
+            "rgb_render": data["rgb_map"].squeeze(),
+            "rgb_error": images_error.squeeze(),
+            "normal": data["normal_map"].squeeze(),
+            "inv_depth": depth_image.squeeze(dim=0),
+            "opacity": data["opacity_map"].squeeze(dim=0),
+        }
+        for key, value in images.items():
+            self.writer.add_image(
+                f"{phase}_img/{key}", value, global_step=self.cur_iter
+            )
+
+    def log_tb(self, data, losses, metrics, phase=""):
+        if self.cur_iter % 100 == 0 and phase == "train":
+            self.log_scalars(data, losses, metrics, phase)
+
+        if phase == "val":
+            self.log_scalars(data, losses, metrics, phase)
+            self.log_images(data, phase=phase)
+
+    def train_epoch(self, epoch, data_loader):
+        self.model.train()
+        for iter, data in enumerate(data_loader):
+            self.cur_iter = epoch * len(data) + iter + 1
+            self.model.progress = self.cur_iter / self.cfg.max_iter
+            self.start_of_iteration()
+            for key, value in data.items():
+                if isinstance(value, torch.Tensor):
+                    data[key] = value.to(self.device)
+            output = self.model(data)
+            data.update(output)
+            losses, metrics = self.compute_loss(data, phase="train")
+
+            losses["total"].backward()
+            self.optim.step()
+            self.sched.step()
+            self.optim.zero_grad()
+            self.log_tb(data, losses, metrics, phase="train")
+            break
+
+    def train(self):
+        cfg = self.cfg
+        data_loader = get_dataloaer(cfg, phase="train")
+        val_loader = get_dataloaer(cfg, phase="val")
+
+        for epoch in range(cfg.max_epoch):
+            self.train_epoch(epoch, data_loader)
+            if epoch % 10 == 0:
+                self.test(val_loader)
+
+    @torch.no_grad()
+    def test(self, data_loader, phase="val"):
+        """The evaluation/inference engine.
+        Args:
+            data_loader: The data loader.
+            output_dir: Output directory to dump the test results.
+            mode: Evaluation mode {"val", "test"}. Can be other modes, but will only gather the data.
+        Returns:
+            data_all: A dictionary of all the data.
+        """
+        self.model.eval()
+        data_loader = tqdm(data_loader, desc="Evaluating", leave=False)
+        data_batches = []
+        for it, data in enumerate(data_loader):
+            for key, value in data.items():
+                if isinstance(value, torch.Tensor):
+                    data[key] = value.to(self.device)
+            output = self.model.inference(data)
+            data.update(output)
+            data_batches.append(data)
+        # Aggregate the data from all devices and process the results.
+        data_gather = misc.collate_test_data_batches(data_batches)
+        # Only the master process should process the results; slaves will just return.
+
+        data_all = misc.get_unique_test_data(data_gather, data_gather["idx"])
+        print(f"Evaluating with {len(data_all['idx'])} samples.")
+
+        if phase == "val":
+            losses, metrics = self.compute_loss(data_all, phase=phase)
+            self.log_tb(data, losses, metrics, phase=phase)

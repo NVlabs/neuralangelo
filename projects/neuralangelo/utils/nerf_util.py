@@ -1,4 +1,4 @@
-'''
+"""
 -----------------------------------------------------------------------------
 Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
@@ -8,13 +8,13 @@ and any modifications thereto. Any use, reproduction, disclosure or
 distribution of this software and related documentation without an express
 license agreement from NVIDIA CORPORATION is strictly prohibited.
 -----------------------------------------------------------------------------
-'''
+"""
 
 import numpy as np
 import torch
 import torch.nn.functional as torch_F
 
-from projects.nerf.utils import camera
+from projects.neuralangelo.utils import camera
 
 
 def sample_dists(ray_size, dist_range, intvs, stratified, device="cuda"):
@@ -33,7 +33,9 @@ def sample_dists(ray_size, dist_range, intvs, stratified, device="cuda"):
         rands = torch.rand(batch_size, num_rays, intvs, 1, device=device)
     else:
         rands = torch.empty(batch_size, num_rays, intvs, 1, device=device).fill_(0.5)
-    rands += torch.arange(intvs, dtype=torch.float, device=device)[None, None, :, None]  # [B,R,N,1]
+    rands += torch.arange(intvs, dtype=torch.float, device=device)[
+        None, None, :, None
+    ]  # [B,R,N,1]
     dists = rands / intvs * (dist_max - dist_min) + dist_min  # [B,R,N,1]
     return dists
 
@@ -83,8 +85,15 @@ def reparametrize_dist(dist, param_type="metric"):
     )[param_type]
 
 
-def ray_generator(pose, intr, image_size, num_rays, full_image=False, camera_ndc=False,
-                  ray_indices=None):
+def ray_generator(
+    pose,
+    intr,
+    image_size,
+    num_rays,
+    full_image=False,
+    camera_ndc=False,
+    ray_indices=None,
+):
     """Yield sampled rays for coordinate-based model to predict NeRF.
     Args:
         pose (tensor [bs,3,4]): Camera poses ([R,t]).
@@ -105,10 +114,16 @@ def ray_generator(pose, intr, image_size, num_rays, full_image=False, camera_ndc
         num_pixels = image_size[0] * image_size[1]
         if full_image:
             # Sample rays from the full image.
-            ray_indices = torch.arange(0, num_pixels, device=pose.device).repeat(batch_size, 1)  # [B,HW]
+            ray_indices = torch.arange(0, num_pixels, device=pose.device).repeat(
+                batch_size, 1
+            )  # [B,HW]
         else:
             # Sample rays randomly. The below is equivalent to batched torch.randperm().
-            ray_indices = torch.rand(batch_size, num_pixels, device=pose.device).argsort(dim=1)[:, :num_rays]  # [B,R]
+            ray_indices = torch.rand(
+                batch_size, num_pixels, device=pose.device
+            ).argsort(dim=1)[
+                :, :num_rays
+            ]  # [B,R]
     center, ray = camera.get_center_and_ray(pose, intr, image_size)  # [B,HW,3]
     # Convert center/ray representations to NDC if necessary.
     if camera_ndc == "new":
@@ -117,8 +132,10 @@ def ray_generator(pose, intr, image_size, num_rays, full_image=False, camera_ndc
         center, ray = camera.convert_NDC(center, ray, intr=intr)
     # Yield num_rays of sampled rays in each iteration (when random, the loop will only iterate once).
     for c in range(0, ray_indices.shape[1], num_rays):
-        ray_idx = ray_indices[:, c:c + num_rays]  # [B,R]
-        batch_idx = torch.arange(batch_size, device=pose.device).repeat(ray_idx.shape[1], 1).t()  # [B,R]
+        ray_idx = ray_indices[:, c : c + num_rays]  # [B,R]
+        batch_idx = (
+            torch.arange(batch_size, device=pose.device).repeat(ray_idx.shape[1], 1).t()
+        )  # [B,R]
         center_slice = center[batch_idx, ray_idx]  # [B,R,3]
         ray_slice = ray[batch_idx, ray_idx]  # [B,R,3]
         yield center_slice, ray_slice, ray_idx
@@ -126,7 +143,9 @@ def ray_generator(pose, intr, image_size, num_rays, full_image=False, camera_ndc
 
 def slice_by_ray_idx(var, ray_idx):
     batch_size, num_rays = ray_idx.shape[:2]
-    batch_idx = torch.arange(batch_size, device=ray_idx.device).repeat(num_rays, 1).t()  # [B,R]
+    batch_idx = (
+        torch.arange(batch_size, device=ray_idx.device).repeat(num_rays, 1).t()
+    )  # [B,R]
     var_slice = var[batch_idx, ray_idx]  # [B,R,...]
     return var_slice
 
@@ -139,7 +158,10 @@ def positional_encoding(input, num_freq_bases):
     Returns:
         input_enc (tensor [bs, ..., 2*N*num_freq_bases]): Positional codes for input.
     """
-    freq = 2 ** torch.arange(num_freq_bases, dtype=torch.float32, device=input.device) * np.pi  # [L].
+    freq = (
+        2 ** torch.arange(num_freq_bases, dtype=torch.float32, device=input.device)
+        * np.pi
+    )  # [L].
     spectrum = input[..., None] * freq  # [B,...,N,L].
     sin, cos = spectrum.sin(), spectrum.cos()  # [B,...,N,L].
     input_enc = torch.stack([sin, cos], dim=-2)  # [B,...,N,2,L].
@@ -156,8 +178,14 @@ def get_inverse_depth(depth, opacity=None, camera_ndc=False, eps=1e-10):
 
 
 class MLPwithSkipConnection(torch.nn.Module):
-
-    def __init__(self, layer_dims, skip_connection=[], activ=None, use_layernorm=False, use_weightnorm=False):
+    def __init__(
+        self,
+        layer_dims,
+        skip_connection=[],
+        activ=None,
+        use_layernorm=False,
+        use_weightnorm=False,
+    ):
         """Initialize a multi-layer perceptron with skip connection.
         Args:
             layer_dims: A list of integers representing the number of channels in each layer.
@@ -199,7 +227,7 @@ class MLPwithSkipConnection(torch.nn.Module):
 def intersect_with_sphere(center, ray_unit, radius=1.0):
     ctc = (center * center).sum(dim=-1, keepdim=True)  # [...,1]
     ctv = (center * ray_unit).sum(dim=-1, keepdim=True)  # [...,1]
-    b2_minus_4ac = ctv ** 2 - (ctc - radius ** 2)
+    b2_minus_4ac = ctv**2 - (ctc - radius**2)
     dist_near = -ctv - b2_minus_4ac.sqrt()
     dist_far = -ctv + b2_minus_4ac.sqrt()
     return dist_near, dist_far
@@ -208,12 +236,12 @@ def intersect_with_sphere(center, ray_unit, radius=1.0):
 def get_pixel_radii(intr):
     # fx and fy should be very close.
     focal = (intr[..., 0, 0] + intr[..., 1, 1]) / 2
-    radii = 1. / focal / np.sqrt(3)
+    radii = 1.0 / focal / np.sqrt(3)
     return radii
 
 
 def contract(x, r_in=1, r_out=2, eps=1e-8):
-    """ Contract function in mip-NeRF 360 (eq 10).
+    """Contract function in mip-NeRF 360 (eq 10).
     Args:
         x (tensor [...,3]): The input points.
     Returns:
@@ -229,19 +257,21 @@ def contract(x, r_in=1, r_out=2, eps=1e-8):
 
 
 def contract_jacobian(x, r_in=1, r_out=2, eps=1e-8):
-    """ Jacobian of the contract function in mip-NeRF 360.
+    """Jacobian of the contract function in mip-NeRF 360.
     Args:
         x (tensor [...,3]): The input points.
     Returns:
         jacobian (tensor [...,3,3]): The Jacobian at the input points.
     """
     x_norm = x.norm(dim=-1)[..., None, None]  # [...,1,1]
-    x_norm_sq = (x ** 2).sum(dim=-1)[..., None, None]  # [...,1,1] should be numerically more stable
+    x_norm_sq = (x**2).sum(dim=-1)[
+        ..., None, None
+    ]  # [...,1,1] should be numerically more stable
     b = r_in * (r_out - r_in)
     scale = r_out - b / (x_norm + eps)  # [...,1,1]
     x_outer_prod = x[..., None] * x[..., None, :]  # [...,3,3]
     eye = torch.eye(3, device=x.device).repeat(*x_norm.shape)  # [...,3,3]
-    term1 = b * x_outer_prod / (x_norm_sq ** 2 + eps)  # [...,3,3]
+    term1 = b * x_outer_prod / (x_norm_sq**2 + eps)  # [...,3,3]
     term2 = scale * (eye - x_outer_prod / x_norm_sq + eps) / (x_norm + eps)  # [...,3,3]
     jacobian_contract = term1 + term2  # [...,3,3]
     # No effect if within r_in.
@@ -251,7 +281,7 @@ def contract_jacobian(x, r_in=1, r_out=2, eps=1e-8):
 
 
 def contract_mip(mean, cov, r_in=1, r_out=2, diag=False):
-    """ Contraction function on mip-NeRF 360 Gaussians.
+    """Contraction function on mip-NeRF 360 Gaussians.
     Args:
         mean (tensor [...,3]): The mean values.
         cov (tensor [...,3,3]): The covariance values.

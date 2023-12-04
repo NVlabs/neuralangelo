@@ -1,4 +1,4 @@
-'''
+"""
 -----------------------------------------------------------------------------
 Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
@@ -8,7 +8,7 @@ and any modifications thereto. Any use, reproduction, disclosure or
 distribution of this software and related documentation without an express
 license agreement from NVIDIA CORPORATION is strictly prohibited.
 -----------------------------------------------------------------------------
-'''
+"""
 
 import torch
 from torch.cuda.amp import autocast
@@ -32,8 +32,9 @@ def volume_rendering_weights(ray, densities, depths, depth_far=None):
     # Volume rendering: compute rendering weights (using quadrature).
     dist_intvs = dists[..., 1:, 0] - dists[..., :-1, 0]  # [B,R,N]
     sigma_delta = densities * dist_intvs  # [B,R,N]
-    sigma_delta_0 = torch.cat([torch.zeros_like(sigma_delta[..., :1]),
-                               sigma_delta[..., :-1]], dim=2)  # [B,R,N]
+    sigma_delta_0 = torch.cat(
+        [torch.zeros_like(sigma_delta[..., :1]), sigma_delta[..., :-1]], dim=2
+    )  # [B,R,N]
     T = (-sigma_delta_0.cumsum(dim=2)).exp_()  # [B,R,N]
     alphas = 1 - (-sigma_delta).exp_()  # [B,R,N]
     # Compute weights for compositing samples.
@@ -57,7 +58,9 @@ def volume_rendering_weights_dist(densities, dists, dist_far=None):
     # Volume rendering: compute rendering weights (using quadrature).
     dist_intvs = dists[..., 1:, 0] - dists[..., :-1, 0]  # [B,R,N]
     sigma_delta = densities * dist_intvs  # [B,R,N]
-    sigma_delta_0 = torch.cat([torch.zeros_like(sigma_delta[..., :1]), sigma_delta[..., :-1]], dim=2)  # [B,R,N]
+    sigma_delta_0 = torch.cat(
+        [torch.zeros_like(sigma_delta[..., :1]), sigma_delta[..., :-1]], dim=2
+    )  # [B,R,N]
     T = (-sigma_delta_0.cumsum(dim=2)).exp_()  # [B,R,N]
     alphas = 1 - (-sigma_delta).exp_()  # [B,R,N]
     # Compute weights for compositing samples.
@@ -91,8 +94,9 @@ def alpha_compositing_weights(alphas):
     Returns:
         weights (tensor [batch,ray,samples,1]): The predicted weight of each MPI (in [0,1]).
     """
-    alphas_front = torch.cat([torch.zeros_like(alphas[..., :1]),
-                              alphas[..., :-1]], dim=2)  # [B,R,N]
+    alphas_front = torch.cat(
+        [torch.zeros_like(alphas[..., :1]), alphas[..., :-1]], dim=2
+    )  # [B,R,N]
     with autocast(enabled=False):  # TODO: may be unstable in some cases.
         visibility = (1 - alphas_front).cumprod(dim=2)  # [B,R,N]
     weights = (alphas * visibility)[..., None]  # [B,R,N,1]
