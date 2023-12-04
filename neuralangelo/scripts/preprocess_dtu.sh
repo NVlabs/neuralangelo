@@ -18,4 +18,4 @@ rm data.zip
 unzip -q data_DTU.zip -d ${1}
 rm data_DTU.zip
 echo "Generate json files"
-python3 projects/neuralangelo/scripts/convert_dtu_to_json.py --dtu_path ${1}
+python3 neuralangelo/scripts/convert_dtu_to_json.py --dtu_path ${1}

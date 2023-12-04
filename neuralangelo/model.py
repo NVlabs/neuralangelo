@@ -16,9 +16,9 @@ import torch.nn.functional as torch_F
 import torch.nn as nn
 from collections import defaultdict
 
-from projects.neuralangelo.utils import nerf_util, camera, render
-from projects.neuralangelo.utils import misc
-from projects.neuralangelo.utils.modules import NeuralSDF, NeuralRGB, BackgroundNeRF
+from neuralangelo.utils import nerf_util, camera, render
+from neuralangelo.utils import misc
+from neuralangelo.utils.modules import NeuralSDF, NeuralRGB, BackgroundNeRF
 
 
 class Model(nn.Module):
