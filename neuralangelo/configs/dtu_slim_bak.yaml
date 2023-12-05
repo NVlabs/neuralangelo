@@ -98,7 +98,7 @@ model:
             type: spherical
             levels: 3
     render:
-        rand_rays: 2048
+        rand_rays: 512
         num_samples:
             coarse: 64
             fine: 16
@@ -108,11 +108,6 @@ model:
     appear_embed:
         enabled: False
         dim: 8
-    fgsampler:
-        grid_prune: True
-    bgsampler:
-        grid_prune: True
-
 
 optim:
     type: AdamW
@@ -133,7 +128,6 @@ data:
     num_workers: 4
     preload: True
     num_images:  # The number of training images.
-    rand_rays: 2048
     train:
         image_size: [1200,1600]
         batch_size: 1

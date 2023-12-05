@@ -19,6 +19,9 @@ from collections import defaultdict
 from neuralangelo.utils import nerf_util, camera, render
 from neuralangelo.utils import misc
 from neuralangelo.utils.modules import NeuralSDF, NeuralRGB, BackgroundNeRF
+from neuralangelo.utils.timer import Timer
+from neuralangelo.points_sampler import OccGridSampler
+from neuralangelo.rays_sampler import RaySampler
 
 
 class Model(nn.Module):
@@ -47,7 +50,10 @@ class Model(nn.Module):
         self.to_full_val_image = partial(
             misc.to_full_image, image_size=cfg_data.val.image_size
         )
+        # self.fg_sampler = OccGridSampler(cfg_model.fg_sampler)
+        # self.ray_sampler = RaySampler(cfg_data)
         self.progress = 0
+        self.timer = Timer()
 
     def build_model(self, cfg_model, cfg_data):
         # appearance encoding
@@ -82,6 +88,7 @@ class Model(nn.Module):
 
     def forward(self, data):
         # Randomly sample and render the pixels.
+
         output = self.render_pixels(
             data["pose"],
             data["intr"],
@@ -159,6 +166,35 @@ class Model(nn.Module):
         return output
 
     def render_rays(self, center, ray_unit, sample_idx=None, stratified=False):
+        def alpha_fn(t_starts, t_ends, ray_indices):
+            t_starts, t_ends = t_starts[..., None], t_ends[..., None]
+            t_origins = rays_o_flatten[ray_indices]
+            t_positions = (t_starts + t_ends) / 2.0
+            t_dirs = rays_d_flatten[ray_indices]
+            positions = t_origins + t_dirs * t_positions
+            if self.training:
+                sdf = self.geometry.forward_sdf(positions)[..., 0]
+            else:
+                sdf = chunk_batch(
+                    self.geometry.forward_sdf,
+                    self.cfg.eval_chunk_size,
+                    positions,
+                )[..., 0]
+
+            inv_std = self.variance(sdf)
+            if self.cfg.use_volsdf:
+                alpha = self.render_step_size * volsdf_density(sdf, inv_std)
+            else:
+                estimated_next_sdf = sdf - self.render_step_size * 0.5
+                estimated_prev_sdf = sdf + self.render_step_size * 0.5
+                prev_cdf = torch.sigmoid(estimated_prev_sdf * inv_std)
+                next_cdf = torch.sigmoid(estimated_next_sdf * inv_std)
+                p = prev_cdf - next_cdf
+                c = prev_cdf
+                alpha = ((p + 1e-5) / (c + 1e-5)).clip(0.0, 1.0)
+
+            return alpha
+
         with torch.no_grad():
             near, far, outside = self.get_dist_bounds(center, ray_unit)
         app, app_outside = self.get_appearance_embedding(sample_idx, ray_unit.shape[1])
@@ -205,23 +241,32 @@ class Model(nn.Module):
     def render_rays_object(
         self, center, ray_unit, near, far, outside, app, stratified=False
     ):
+        self.timer.start_timer("sample_point")
         with torch.no_grad():
             dists = self.sample_dists_all(
                 center, ray_unit, near, far, stratified=stratified
             )  # [B,R,N,3]
         points = camera.get_3D_points_from_dist(center, ray_unit, dists)  # [B,R,N,3]
+        self.timer.end_timer("sample_point")
+        self.timer.start_timer("sdf")
         sdfs, feats = self.neural_sdf.forward(points)  # [B,R,N,1],[B,R,N,K]
         sdfs[outside[..., None].expand_as(sdfs)] = self.outside_val
         # Compute 1st- and 2nd-order gradients.
         rays_unit = ray_unit[..., None, :].expand_as(points).contiguous()  # [B,R,N,3]
+        self.timer.end_timer("sdf")
+        self.timer.start_timer("compute_gradients")
         gradients, hessians = self.neural_sdf.compute_gradients(
             points, training=self.training, sdf=sdfs
         )
+        self.timer.end_timer("compute_gradients")
         normals = torch_F.normalize(gradients, dim=-1)  # [B,R,N,3]
+        self.timer.start_timer("rgb")
         rgbs = self.neural_rgb.forward(
             points, normals, rays_unit, feats, app=app
         )  # [B,R,N,3]
         # SDF volume rendering.
+        self.timer.end_timer("rgb")
+        self.timer.start_timer("alphas")
         alphas = self.compute_neus_alphas(
             ray_unit,
             sdfs,
@@ -230,6 +275,7 @@ class Model(nn.Module):
             dist_far=far[..., None],
             progress=self.progress,
         )  # [B,R,N]
+        self.timer.end_timer("alphas")
         if not self.training:
             weights = render.alpha_compositing_weights(alphas)  # [B,R,N,1]
             opacity = render.composite(1.0, weights)  # [B,R,1]

@@ -1,6 +1,6 @@
 import os
-import argparse
 import time
+import argparse
 from neuralangelo.utils.config import Config
 from neuralangelo.utils.torch_utils import init_cudnn
 from neuralangelo.trainer import Trainer
@@ -9,11 +9,8 @@ import neuralangelo.utils.torch_utils as th_utils
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Training")
-    parser.add_argument(
-        "--config", help="Path to the training config file.", required=True
-    )
+    parser.add_argument("--config", help="Path to training config file.", required=True)
     parser.add_argument("--seed", type=int, default=0, help="Random seed.")
-    parser.add_argument("--wandb_name", default="default", type=str)
     args, cfg_cmd = parser.parse_known_args()
     return args, cfg_cmd
 

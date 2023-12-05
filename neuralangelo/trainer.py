@@ -1,11 +1,13 @@
 import torch
 import torch.nn.functional as torch_F
 from tqdm import tqdm
+from loguru import logger
 from torch.utils.tensorboard import SummaryWriter
 from neuralangelo.model import Model
 from neuralangelo.datasets.dataloader import get_dataloaer
 import neuralangelo.utils.misc as misc
 import neuralangelo.utils.torch_utils as th_utils
+from neuralangelo.utils.timer import Timer
 
 
 class Trainer(object):
@@ -31,6 +33,7 @@ class Trainer(object):
         self.init_losses(cfg)
         self.cur_iter = 0
         self.writer = SummaryWriter(cfg.ckpt.output)
+        self.timer = Timer()
 
     def setup_model(self, cfg):
         model = Model(cfg.model, cfg.data)
@@ -142,7 +145,7 @@ class Trainer(object):
             )
 
     def log_tb(self, data, losses, metrics, phase=""):
-        if self.cur_iter % 100 == 0 and phase == "train":
+        if self.cur_iter % 500 == 0 and phase == "train":
             self.log_scalars(data, losses, metrics, phase)
 
         if phase == "val":
@@ -155,19 +158,34 @@ class Trainer(object):
             self.cur_iter = epoch * len(data) + iter + 1
             self.model.progress = self.cur_iter / self.cfg.max_iter
             self.start_of_iteration()
+            self.timer.start_timer("data_to_cuda")
             for key, value in data.items():
                 if isinstance(value, torch.Tensor):
                     data[key] = value.to(self.device)
+            self.timer.end_timer("data_to_cuda")
+            self.timer.start_timer("model_forward")
             output = self.model(data)
+            self.timer.end_timer("model_forward")
+            self.timer.start_timer("compute_loss")
             data.update(output)
             losses, metrics = self.compute_loss(data, phase="train")
-
+            self.timer.end_timer("compute_loss")
+            self.timer.start_timer("backward")
             losses["total"].backward()
+            self.timer.end_timer("backward")
+            self.timer.start_timer("step")
             self.optim.step()
             self.sched.step()
             self.optim.zero_grad()
+            self.timer.end_timer("step")
+            self.timer.start_timer("log_tb")
             self.log_tb(data, losses, metrics, phase="train")
-            break
+            if self.cur_iter % 1000 == 0:
+                logger.info(f"{self.cur_iter}/{self.cfg.max_iter}")
+            self.timer.end_timer("log_tb")
+
+            if self.cur_iter > self.cfg.max_iter:
+                break
 
     def train(self):
         cfg = self.cfg
@@ -176,18 +194,17 @@ class Trainer(object):
 
         for epoch in range(cfg.max_epoch):
             self.train_epoch(epoch, data_loader)
-            if epoch % 10 == 0:
+            if self.cur_iter % 2000 == 0:
                 self.test(val_loader)
+        self.timer.print()
+        self.model.timer.print()
 
     @torch.no_grad()
     def test(self, data_loader, phase="val"):
         """The evaluation/inference engine.
         Args:
             data_loader: The data loader.
-            output_dir: Output directory to dump the test results.
-            mode: Evaluation mode {"val", "test"}. Can be other modes, but will only gather the data.
-        Returns:
-            data_all: A dictionary of all the data.
+            phase: Evaluation mode {"val", "test"}. Can be other modes, but will only gather the data.
         """
         self.model.eval()
         data_loader = tqdm(data_loader, desc="Evaluating", leave=False)
