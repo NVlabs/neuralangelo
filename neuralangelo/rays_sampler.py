@@ -18,13 +18,12 @@ class RaySampler(object):
     @torch.no_grad()
     def sample(self, data: Dict):
         # for training
-        ray_idx = torch.randperm(self.max_train_raynum)[: self.cfg.rand_rays]  # [R]
         # [B,HW,3]
         center, ray = camera.get_center_and_ray(
-            data["pose"], data["intr"], self.im_size
+            data["pose"], data["intr"], self.train_imsize
         )
-        center = nerf_util.slice_by_ray_idx(center, ray_idx)  # [B,R,3]
-        ray = nerf_util.slice_by_ray_idx(ray, ray_idx)  # [B,R,3]
+        center = nerf_util.slice_by_ray_idx(center, data["ray_idx"])  # [B,R,3]
+        ray = nerf_util.slice_by_ray_idx(ray, data["ray_idx"])  # [B,R,3]
         ray_unit = torch_F.normalize(ray, dim=-1)  # [B,R,3]
         return RayBundle(
             origins=center,
@@ -35,11 +34,17 @@ class RaySampler(object):
     @torch.no_grad()
     def ray_generator(self, data: Dict):
         # for inference
-        return nerf_util.ray_generator(
+        for center, ray, ray_idx in nerf_util.ray_generator(
             pose=data["pose"],
             intr=data["intr"],
             image_size=self.val_imsize,
             full_image=True,
             camera_ndc=False,
             num_rays=self.cfg.rand_rays,
-        )
+        ):
+            yield RayBundle(
+                origins=center,
+                directions=ray,
+                rays_index=ray_idx,
+                camera_indices=data["idx"],
+            )

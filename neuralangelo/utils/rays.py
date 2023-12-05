@@ -11,7 +11,8 @@ class RayBundle:
     """Ray origins (XYZ)"""
     directions: Tensor  # "*batch 3"]
     """Unit ray direction vector"""
-    pixel_area: Tensor  # "*batch 1"]
+    rays_index: Tensor = None
+    pixel_area: Tensor = None  # "*batch 1"]
     """Projected area of pixel a distance 1 away from origin"""
     camera_indices: Optional[Tensor] = None  # , "*batch 1"
     """Camera indices"""

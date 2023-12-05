@@ -1,15 +1,3 @@
-"""
------------------------------------------------------------------------------
-Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
-
-NVIDIA CORPORATION and its licensors retain all intellectual property
-and proprietary rights in and to this software, related documentation
-and any modifications thereto. Any use, reproduction, disclosure or
-distribution of this software and related documentation without an express
-license agreement from NVIDIA CORPORATION is strictly prohibited.
------------------------------------------------------------------------------
-"""
-
 from functools import partial
 import torch
 import torch.nn.functional as torch_F
@@ -38,11 +26,6 @@ class Model(nn.Module):
         # Define models.
         self.build_model(cfg_model, cfg_data)
         # Define functions.
-        self.ray_generator = partial(
-            nerf_util.ray_generator,
-            camera_ndc=False,
-            num_rays=cfg_model.render.rand_rays,
-        )
         self.sample_dists_from_pdf = partial(
             nerf_util.sample_dists_from_pdf,
             intvs_fine=cfg_model.render.num_samples.fine,
@@ -51,7 +34,7 @@ class Model(nn.Module):
             misc.to_full_image, image_size=cfg_data.val.image_size
         )
         # self.fg_sampler = OccGridSampler(cfg_model.fg_sampler)
-        # self.ray_sampler = RaySampler(cfg_data)
+        self.ray_sampler = RaySampler(cfg_data)
         self.progress = 0
         self.timer = Timer()
 
@@ -87,15 +70,13 @@ class Model(nn.Module):
         )
 
     def forward(self, data):
-        # Randomly sample and render the pixels.
+        raybundle = self.ray_sampler.sample(data)
 
-        output = self.render_pixels(
-            data["pose"],
-            data["intr"],
-            image_size=self.image_size_train,
+        output = self.render_rays(
+            center=raybundle.origins,
+            ray_unit=raybundle.directions,
+            sample_idx=raybundle.camera_indices,
             stratified=self.cfg_render.stratified,
-            sample_idx=data["idx"],
-            ray_idx=data["ray_idx"],
         )
         return output
 
@@ -104,11 +85,8 @@ class Model(nn.Module):
         self.eval()
         # Render the full images.
         output = self.render_image(
-            data["pose"],
-            data["intr"],
-            image_size=self.image_size_val,
+            data=data,
             stratified=False,
-            sample_idx=data["idx"],
         )  # [B,N,C]
         # Get full rendered RGB and depth images.
         rot = data["pose"][..., :3, :3]  # [B,3,3]
@@ -121,7 +99,7 @@ class Model(nn.Module):
         )
         return output
 
-    def render_image(self, pose, intr, image_size, stratified=False, sample_idx=None):
+    def render_image(self, data, stratified=False):
         """Render the rays given the camera intrinsics and poses.
         Args:
             pose (tensor [batch,3,4]): Camera poses ([R,t]).
@@ -132,18 +110,19 @@ class Model(nn.Module):
             output: A dictionary containing the outputs.
         """
         output = defaultdict(list)
-        for center, ray, _ in self.ray_generator(
-            pose, intr, image_size, full_image=True
-        ):
-            ray_unit = torch_F.normalize(ray, dim=-1)  # [B,R,3]
+        for raybundle in self.ray_sampler.ray_generator(data):
+            ray_unit = torch_F.normalize(raybundle.directions, dim=-1)  # [B,R,3]
             output_batch = self.render_rays(
-                center, ray_unit, sample_idx=sample_idx, stratified=stratified
+                raybundle.origins,
+                ray_unit,
+                sample_idx=raybundle.camera_indices,
+                stratified=stratified,
             )
             if not self.training:
                 dist = render.composite(
                     output_batch["dists"], output_batch["weights"]
                 )  # [B,R,1]
-                depth = dist / ray.norm(dim=-1, keepdim=True)
+                depth = dist / raybundle.directions.norm(dim=-1, keepdim=True)
                 output_batch.update(depth=depth)
             for key, value in output_batch.items():
                 if value is not None:
@@ -151,18 +130,6 @@ class Model(nn.Module):
         # Concat each item (list) in output into one tensor. Concatenate along the ray dimension (1)
         for key, value in output.items():
             output[key] = torch.cat(value, dim=1)
-        return output
-
-    def render_pixels(
-        self, pose, intr, image_size, stratified=False, sample_idx=None, ray_idx=None
-    ):
-        center, ray = camera.get_center_and_ray(pose, intr, image_size)  # [B,HW,3]
-        center = nerf_util.slice_by_ray_idx(center, ray_idx)  # [B,R,3]
-        ray = nerf_util.slice_by_ray_idx(ray, ray_idx)  # [B,R,3]
-        ray_unit = torch_F.normalize(ray, dim=-1)  # [B,R,3]
-        output = self.render_rays(
-            center, ray_unit, sample_idx=sample_idx, stratified=stratified
-        )
         return output
 
     def render_rays(self, center, ray_unit, sample_idx=None, stratified=False):
