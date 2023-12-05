@@ -1,4 +1,4 @@
-'''
+"""
 -----------------------------------------------------------------------------
 Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
@@ -8,13 +8,13 @@ and any modifications thereto. Any use, reproduction, disclosure or
 distribution of this software and related documentation without an express
 license agreement from NVIDIA CORPORATION is strictly prohibited.
 -----------------------------------------------------------------------------
-'''
+"""
 
 import numpy as np
 import torch
 
 
-class Pose():
+class Pose:
     """
     A class of operations on camera poses (PyTorch tensors with shape [...,3,4]).
     Each [3,4] camera pose takes the form of [R|t].
@@ -97,7 +97,7 @@ class Pose():
         return pose_intp
 
 
-class Lie():
+class Lie:
     """
     Lie algebra for SO(3) and SE(3) operations in PyTorch.
     """
@@ -114,8 +114,11 @@ class Lie():
     def SO3_to_so3(self, R, eps=1e-7):  # [..., 3, 3]
         trace = R[..., 0, 0] + R[..., 1, 1] + R[..., 2, 2]
         theta = ((trace - 1) / 2).clamp(-1 + eps, 1 - eps).acos_()[
-                    ..., None, None] % np.pi  # ln(R) will explode if theta==pi
-        lnR = 1 / (2 * self.taylor_A(theta) + 1e-8) * (R - R.transpose(-2, -1))  # FIXME: wei-chiu finds it weird
+            ..., None, None
+        ] % np.pi  # ln(R) will explode if theta==pi
+        lnR = (
+            1 / (2 * self.taylor_A(theta) + 1e-8) * (R - R.transpose(-2, -1))
+        )  # FIXME: wei-chiu finds it weird
         w0, w1, w2 = lnR[..., 2, 1], lnR[..., 0, 2], lnR[..., 1, 0]
         w = torch.stack([w0, w1, w2], dim=-1)
         return w
@@ -141,7 +144,7 @@ class Lie():
         eye = torch.eye(3, device=w.device, dtype=torch.float32)
         A = self.taylor_A(theta)
         B = self.taylor_B(theta)
-        invV = eye - 0.5 * wx + (1 - A / (2 * B)) / (theta ** 2 + eps) * wx @ wx
+        invV = eye - 0.5 * wx + (1 - A / (2 * B)) / (theta**2 + eps) * wx @ wx
         u = (invV @ t)[..., 0]
         wu = torch.cat([w, u], dim=-1)
         return wu
@@ -149,15 +152,20 @@ class Lie():
     def skew_symmetric(self, w):
         w0, w1, w2 = w.unbind(dim=-1)
         zero = torch.zeros_like(w0)
-        wx = torch.stack([torch.stack([zero, -w2, w1], dim=-1),
-                          torch.stack([w2, zero, -w0], dim=-1),
-                          torch.stack([-w1, w0, zero], dim=-1)], dim=-2)
+        wx = torch.stack(
+            [
+                torch.stack([zero, -w2, w1], dim=-1),
+                torch.stack([w2, zero, -w0], dim=-1),
+                torch.stack([-w1, w0, zero], dim=-1),
+            ],
+            dim=-2,
+        )
         return wx
 
     def taylor_A(self, x, nth=10):
         # Taylor expansion of sin(x)/x.
         ans = torch.zeros_like(x)
-        denom = 1.
+        denom = 1.0
         for i in range(nth + 1):
             if i > 0:
                 denom *= (2 * i) * (2 * i + 1)
@@ -167,7 +175,7 @@ class Lie():
     def taylor_B(self, x, nth=10):
         # Taylor expansion of (1-cos(x))/x**2.
         ans = torch.zeros_like(x)
-        denom = 1.
+        denom = 1.0
         for i in range(nth + 1):
             denom *= (2 * i + 1) * (2 * i + 2)
             ans = ans + (-1) ** i * x ** (2 * i) / denom
@@ -176,23 +184,46 @@ class Lie():
     def taylor_C(self, x, nth=10):
         # Taylor expansion of (x-sin(x))/x**3.
         ans = torch.zeros_like(x)
-        denom = 1.
+        denom = 1.0
         for i in range(nth + 1):
             denom *= (2 * i + 2) * (2 * i + 3)
             ans = ans + (-1) ** i * x ** (2 * i) / denom
         return ans
 
 
-class Quaternion():
-
+class Quaternion:
     def q_to_R(self, q):  # [...,4]
         # https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
         qa, qb, qc, qd = q.unbind(dim=-1)
         R = torch.stack(
-            [torch.stack([1 - 2 * (qc ** 2 + qd ** 2), 2 * (qb * qc - qa * qd), 2 * (qa * qc + qb * qd)], dim=-1),
-             torch.stack([2 * (qb * qc + qa * qd), 1 - 2 * (qb ** 2 + qd ** 2), 2 * (qc * qd - qa * qb)], dim=-1),
-             torch.stack([2 * (qb * qd - qa * qc), 2 * (qa * qb + qc * qd), 1 - 2 * (qb ** 2 + qc ** 2)], dim=-1)],
-            dim=-2)
+            [
+                torch.stack(
+                    [
+                        1 - 2 * (qc**2 + qd**2),
+                        2 * (qb * qc - qa * qd),
+                        2 * (qa * qc + qb * qd),
+                    ],
+                    dim=-1,
+                ),
+                torch.stack(
+                    [
+                        2 * (qb * qc + qa * qd),
+                        1 - 2 * (qb**2 + qd**2),
+                        2 * (qc * qd - qa * qb),
+                    ],
+                    dim=-1,
+                ),
+                torch.stack(
+                    [
+                        2 * (qb * qd - qa * qc),
+                        2 * (qa * qb + qc * qd),
+                        1 - 2 * (qb**2 + qc**2),
+                    ],
+                    dim=-1,
+                ),
+            ],
+            dim=-2,
+        )
         return R
 
     def R_to_q(self, R, eps=1e-6):  # [...,3,3]
@@ -213,16 +244,21 @@ class Quaternion():
     def invert(self, q):  # [...,4]
         qa, qb, qc, qd = q.unbind(dim=-1)
         norm = q.norm(dim=-1, keepdim=True)
-        q_inv = torch.stack([qa, -qb, -qc, -qd], dim=-1) / norm ** 2
+        q_inv = torch.stack([qa, -qb, -qc, -qd], dim=-1) / norm**2
         return q_inv
 
     def product(self, q1, q2):  # [...,4]
         q1a, q1b, q1c, q1d = q1.unbind(dim=-1)
         q2a, q2b, q2c, q2d = q2.unbind(dim=-1)
-        hamil_prod = torch.stack([q1a * q2a - q1b * q2b - q1c * q2c - q1d * q2d,
-                                  q1a * q2b + q1b * q2a + q1c * q2d - q1d * q2c,
-                                  q1a * q2c - q1b * q2d + q1c * q2a + q1d * q2b,
-                                  q1a * q2d + q1b * q2c - q1c * q2b + q1d * q2a], dim=-1)
+        hamil_prod = torch.stack(
+            [
+                q1a * q2a - q1b * q2b - q1c * q2c - q1d * q2d,
+                q1a * q2b + q1b * q2a + q1c * q2d - q1d * q2c,
+                q1a * q2c - q1b * q2d + q1c * q2a + q1d * q2b,
+                q1a * q2d + q1b * q2c - q1c * q2b + q1d * q2a,
+            ],
+            dim=-1,
+        )
         return hamil_prod
 
     def interpolate(self, q1, q2, alpha):  # [...,4],[...,4],[...,1]
@@ -231,7 +267,9 @@ class Quaternion():
         flip = cos_angle < 0
         q1 = q1 * (~flip) - q1 * flip  # [...,4]
         theta = cos_angle.abs().acos()  # [...,1]
-        slerp = (((1 - alpha) * theta).sin() * q1 + (alpha * theta).sin() * q2) / theta.sin()  # [...,4]
+        slerp = (
+            ((1 - alpha) * theta).sin() * q1 + (alpha * theta).sin() * q2
+        ) / theta.sin()  # [...,4]
         return slerp
 
 
@@ -273,9 +311,14 @@ def angle_to_rotation_matrix(a, axis):
         a = torch.tensor(a)
     zero = torch.zeros_like(a)
     eye = torch.ones_like(a)
-    M = torch.stack([torch.stack([a.cos(), -a.sin(), zero], dim=-1),
-                     torch.stack([a.sin(), a.cos(), zero], dim=-1),
-                     torch.stack([zero, zero, eye], dim=-1)], dim=-2)
+    M = torch.stack(
+        [
+            torch.stack([a.cos(), -a.sin(), zero], dim=-1),
+            torch.stack([a.sin(), a.cos(), zero], dim=-1),
+            torch.stack([zero, zero, eye], dim=-1),
+        ],
+        dim=-2,
+    )
     M = M.roll((roll, roll), dims=(-2, -1))
     return M
 
@@ -348,14 +391,19 @@ def convert_NDC2(center, ray, intr):
     # Get the metric image plane (i.e. new "center"): (sx*cx/cz, sy*cy/cz, 1-2/cz).
     center = center + ray  # This is the key difference.
     cx, cy, cz = center.unbind(dim=-1)  # [...,R]
-    image_plane = torch.stack([scale_x[..., None] * cx / cz,
-                               scale_x[..., None] * cy / cz,
-                               1 - 2 / cz], dim=-1)
+    image_plane = torch.stack(
+        [scale_x[..., None] * cx / cz, scale_x[..., None] * cy / cz, 1 - 2 / cz], dim=-1
+    )
     # Get the infinity plane: (sx*rx/rz, sy*ry/rz, 1).
     rx, ry, rz = ray.unbind(dim=-1)  # [...,R]
-    inf_plane = torch.stack([scale_x[..., None] * rx / rz,
-                             scale_y[..., None] * ry / rz,
-                             torch.ones_like(rz)], dim=-1)
+    inf_plane = torch.stack(
+        [
+            scale_x[..., None] * rx / rz,
+            scale_y[..., None] * ry / rz,
+            torch.ones_like(rz),
+        ],
+        dim=-1,
+    )
     # The NDC ray is the difference between the two planes, assuming t \in [0,1].
     ndc_ray = inf_plane - image_plane
     return image_plane, ndc_ray
@@ -365,7 +413,9 @@ def rotation_distance(R1, R2, eps=1e-7):
     # http://www.boris-belousov.net/2016/12/01/quat-dist/
     R_diff = R1 @ R2.transpose(-2, -1)
     trace = R_diff[..., 0, 0] + R_diff[..., 1, 1] + R_diff[..., 2, 2]
-    angle = ((trace - 1) / 2).clamp(-1 + eps, 1 - eps).acos_()  # numerical stability near -1/+1
+    angle = (
+        ((trace - 1) / 2).clamp(-1 + eps, 1 - eps).acos_()
+    )  # numerical stability near -1/+1
     return angle
 
 
@@ -387,9 +437,15 @@ def cross_product_matrix(x):
     return: [3, 3] tensor representing the matrix form of cross product.
     """
     return torch.tensor(
-        [[0, -x[2], x[1]],
-         [x[2], 0, -x[0]],
-         [-x[1], x[0], 0, ]]
+        [
+            [0, -x[2], x[1]],
+            [x[2], 0, -x[0]],
+            [
+                -x[1],
+                x[0],
+                0,
+            ],
+        ]
     )
 
 
@@ -431,7 +487,9 @@ def get_ray_depth_plane_intersection(center, ray, depths):
     # --> x = c+t*v = c+(d-n@c)/(n@v)*v.
     center, ray = center[:, :, None], ray[:, :, None]  # [B,HW,L,3], [B,HW,1,3]
     depths = depths[None, None, :, None]  # [1,1,L,1]
-    intsc_points = center + (depths - center[..., 2:]) / ray[..., 2:] * ray  # [B,HW,L,3]
+    intsc_points = (
+        center + (depths - center[..., 2:]) / ray[..., 2:] * ray
+    )  # [B,HW,L,3]
     return intsc_points
 
 
@@ -446,7 +504,9 @@ def unit_view_vector_to_rotation_matrix(v, axes="ZYZ"):
     """
     alpha = torch.arctan2(v[..., 1], v[..., 0])  # [...]
     beta = np.pi - v[..., 2].arccos()  # [...]
-    euler_angles = torch.stack([torch.ones_like(alpha) * np.pi / 2, -beta, alpha], dim=-1)  # [...,3]
+    euler_angles = torch.stack(
+        [torch.ones_like(alpha) * np.pi / 2, -beta, alpha], dim=-1
+    )  # [...,3]
     rot2 = angle_to_rotation_matrix(euler_angles[..., 2], axes[2])  # [...,3,3]
     rot1 = angle_to_rotation_matrix(euler_angles[..., 1], axes[1])  # [...,3,3]
     rot0 = angle_to_rotation_matrix(euler_angles[..., 0], axes[0])  # [...,3,3]
@@ -476,15 +536,21 @@ def sample_on_spherical_cap(anchor, N, max_angle):
     s = (h * (2 - k)).sqrt()  # [...,N]
     points = torch.stack([s * x, s * y, 1 - k], dim=-1)  # [...,N,3]
     # Transform to center around the anchor.
-    ref_z = torch.tensor([0., 0., 1.], device=anchor.device)
+    ref_z = torch.tensor([0.0, 0.0, 1.0], device=anchor.device)
     v = -anchor.cross(ref_z)  # [...,3]
     ss_v = lie.skew_symmetric(v)  # [...,3,3]
-    R = torch.eye(3, device=anchor.device) + ss_v + ss_v @ ss_v / (1 + anchor @ ref_z)[..., None, None]  # [...,3,3]
+    R = (
+        torch.eye(3, device=anchor.device)
+        + ss_v
+        + ss_v @ ss_v / (1 + anchor @ ref_z)[..., None, None]
+    )  # [...,3,3]
     points = points @ R.transpose(-2, -1)  # [...,N,3]
     return points
 
 
-def sample_on_spherical_cap_northern(anchor, N, max_angle, away_from=None, max_reject_count=None):
+def sample_on_spherical_cap_northern(
+    anchor, N, max_angle, away_from=None, max_reject_count=None
+):
     """Sample n points only the northern view hemisphere within the angle to x."""
 
     def find_invalid_points(points):
