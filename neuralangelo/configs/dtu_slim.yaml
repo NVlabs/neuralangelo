@@ -145,4 +145,4 @@ cudnn:
     deterministic: False
     benchmark: True
 
-max_epoch: 9999999999
+max_epoch: 10
